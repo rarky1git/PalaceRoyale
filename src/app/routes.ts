@@ -4,6 +4,7 @@ import RobotGamePage from './pages/RobotGamePage';
 import LobbyPage from './pages/LobbyPage';
 import MultiplayerGamePage from './pages/MultiplayerGamePage';
 import HowToPlayPage from './pages/HowToPlayPage';
+import SettingsPage from './pages/SettingsPage';
 
 export const router = createBrowserRouter([
   { path: '/', Component: HomePage },
@@ -11,4 +12,5 @@ export const router = createBrowserRouter([
   { path: '/lobby', Component: LobbyPage },
   { path: '/multiplayer', Component: MultiplayerGamePage },
   { path: '/how-to-play', Component: HowToPlayPage },
+  { path: '/settings', Component: SettingsPage },
 ]);

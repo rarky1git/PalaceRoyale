@@ -14,6 +14,7 @@ import {
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
+import { useSettings } from '../contexts/SettingsContext';
 
 // Seeded random per card ID for consistent rotations
 function seededRandom(seed: string): number {
@@ -46,6 +47,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const [miniOpponents, setMiniOpponents] = useState(false);
+  const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
   const isMyTurn = gameState.players[gameState.currentPlayerIndex]?.id === myPlayerId;
@@ -69,19 +71,21 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   useEffect(() => {
     if (gameState.version !== prevVersionRef.current) {
       const action = gameState.lastAction;
-      if (action?.type === 'slam') {
-        setAnimEffect('wipeout');
-        setTimeout(() => setAnimEffect(null), 3500);
-      } else if (action?.type === 'sparkle') {
-        setAnimEffect('sparkle');
-        setTimeout(() => setAnimEffect(null), 1500);
-      } else if (action?.type === 'wipeout') {
-        setAnimEffect('wipeout');
-        setTimeout(() => setAnimEffect(null), 4500);
+      if (settings.particleEffects) {
+        if (action?.type === 'slam') {
+          setAnimEffect('wipeout');
+          setTimeout(() => setAnimEffect(null), 3500);
+        } else if (action?.type === 'sparkle') {
+          setAnimEffect('sparkle');
+          setTimeout(() => setAnimEffect(null), 1500);
+        } else if (action?.type === 'wipeout') {
+          setAnimEffect('wipeout');
+          setTimeout(() => setAnimEffect(null), 4500);
+        }
       }
       prevVersionRef.current = gameState.version;
     }
-  }, [gameState.version]);
+  }, [gameState.version, settings.particleEffects]);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -346,6 +350,25 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Debug overlay */}
+      {settings.debugMode && (
+        <div className="absolute top-0 right-0 z-50 bg-black/80 text-green-300 text-[9px] font-mono p-2 max-w-48 pointer-events-none">
+          <div className="font-bold text-yellow-400 mb-1">DEBUG</div>
+          <div>v{gameState.version}</div>
+          <div>phase: {gameState.phase}</div>
+          <div>turn: {gameState.players[gameState.currentPlayerIndex]?.name}</div>
+          <div>pile: {gameState.pickupPile.length}</div>
+          <div>draw: {gameState.drawPile.length}</div>
+          <div>discard: {gameState.discardPile.length}</div>
+          {gameState.waitingForBonus && <div>bonus: {gameState.waitingForBonus.type}</div>}
+          {gameState.pendingCounter && <div>counter: {gameState.pendingCounter.type}</div>}
+          {gameState.drawBonus && <div>drawBonus: {gameState.drawBonus.playerId}</div>}
+          {(gameState.eliminated || []).length > 0 && (
+            <div>elim: {(gameState.eliminated || []).length}</div>
+          )}
+        </div>
+      )}
 
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
