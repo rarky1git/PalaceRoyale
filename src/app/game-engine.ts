@@ -762,6 +762,7 @@ export function pickupPile(state: GameState, playerId: string): GameState {
   const pIdx = s.players.findIndex(p => p.id === playerId);
 
   if (pIdx !== s.currentPlayerIndex) throw new Error('Not your turn');
+  if (s.waitingForBonus) throw new Error('Must complete bonus action first');
 
   // Skip steal check during counter scenarios (player is forced to pick up)
   if (!s.pendingCounter) {
