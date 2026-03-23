@@ -792,8 +792,12 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
   if (s.pickupPile.length === 0) throw new Error('Pile is empty, no draw bonus');
   if (cardIds.length === 0) throw new Error('Must play at least one card');
 
+  // Track whether the counter window was open before bonus player acts.
+  // If so, currentPlayerIndex is already at the counter player for their normal turn.
+  const counterWasOpen = s.pendingCounter?.type === 'drawBonus' && s.pendingCounter.bonusPlayerId === playerId;
+
   // If counter player hasn't acted yet, bonus player playing their drawBonus closes the window
-  if (s.pendingCounter?.type === 'drawBonus' && s.pendingCounter.bonusPlayerId === playerId) {
+  if (counterWasOpen) {
     s.pendingCounter = null;
   }
 
@@ -879,7 +883,12 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     return s;
   }
 
-  advanceTurn(s);
+  if (counterWasOpen) {
+    // currentPlayerIndex is already at the counter player for their normal turn — don't advance
+    s.log.push(`${s.players[s.currentPlayerIndex].name}'s turn.`);
+  } else {
+    advanceTurn(s);
+  }
   s.lastAction = { type: 'play', cards, playerId };
   s.version++;
   return s;
@@ -890,12 +899,17 @@ export function skipDrawBonus(state: GameState, playerId: string): GameState {
   const s = deepClone(state);
   if (!s.drawBonus || s.drawBonus.playerId !== playerId) throw new Error('No draw bonus pending');
   s.drawBonus = null;
-  // If counter window is still open, closing the bonus also closes the counter opportunity
+  const bonusPlayerName = s.players.find(p => p.id === playerId)!.name;
+  // If counter window is still open, closing the bonus also closes the counter opportunity.
+  // currentPlayerIndex is already at the counter player for their normal turn — don't advance.
   if (s.pendingCounter?.type === 'drawBonus' && s.pendingCounter.bonusPlayerId === playerId) {
     s.pendingCounter = null;
+    s.log.push(`${bonusPlayerName} skips draw bonus.`);
+    s.log.push(`${s.players[s.currentPlayerIndex].name}'s turn.`);
+  } else {
+    s.log.push(`${bonusPlayerName} skips draw bonus.`);
+    advanceTurn(s);
   }
-  s.log.push(`${s.players.find(p => p.id === playerId)!.name} skips draw bonus.`);
-  advanceTurn(s);
   s.version++;
   return s;
 }
