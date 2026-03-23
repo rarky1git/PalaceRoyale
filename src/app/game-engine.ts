@@ -354,11 +354,14 @@ function trySetDrawBonus(s: GameState, playerId: string): boolean {
     const playerIdx = s.players.findIndex(p => p.id === playerId);
     const nextIdx = getNextActivePlayerIndex(s, playerIdx);
     if (nextIdx !== playerIdx) {
-      // Next player gets counter opportunity first
+      // Both players can act simultaneously:
+      // - next player may counter by playing a valid card
+      // - bonus player may use their drawBonus at the same time
       s.pendingCounter = { type: 'drawBonus', bonusPlayerId: playerId };
+      s.drawBonus = { playerId };
       s.currentPlayerIndex = nextIdx;
       const counterPlayer = s.players[nextIdx];
-      s.log.push(`Bonus! ${player.name} has ${getRankDisplay(pileTopRank)}s matching the pile. ${counterPlayer.name} may counter or pass.`);
+      s.log.push(`Bonus! ${player.name} has ${getRankDisplay(pileTopRank)}s matching the pile. ${counterPlayer.name} may counter — or ${player.name} may play the bonus now.`);
     } else {
       // Only one player left, give bonus directly
       s.drawBonus = { playerId };
@@ -789,6 +792,11 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
   if (s.pickupPile.length === 0) throw new Error('Pile is empty, no draw bonus');
   if (cardIds.length === 0) throw new Error('Must play at least one card');
 
+  // If counter player hasn't acted yet, bonus player playing their drawBonus closes the window
+  if (s.pendingCounter?.type === 'drawBonus' && s.pendingCounter.bonusPlayerId === playerId) {
+    s.pendingCounter = null;
+  }
+
   const pileTopRank = getTopCard(s.pickupPile)!.rank;
 
   // All cards must be from hand and match the pile top rank
@@ -882,6 +890,10 @@ export function skipDrawBonus(state: GameState, playerId: string): GameState {
   const s = deepClone(state);
   if (!s.drawBonus || s.drawBonus.playerId !== playerId) throw new Error('No draw bonus pending');
   s.drawBonus = null;
+  // If counter window is still open, closing the bonus also closes the counter opportunity
+  if (s.pendingCounter?.type === 'drawBonus' && s.pendingCounter.bonusPlayerId === playerId) {
+    s.pendingCounter = null;
+  }
   s.log.push(`${s.players.find(p => p.id === playerId)!.name} skips draw bonus.`);
   advanceTurn(s);
   s.version++;
@@ -1027,6 +1039,7 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
 
   // Clear the pending counter - bonus is cancelled
   s.pendingCounter = null;
+  s.drawBonus = null; // Cancel drawBonus if counter player acted first
 
   const playedRank = cards[0].rank;
 
@@ -1118,7 +1131,7 @@ export function passCounter(state: GameState, playerId: string): GameState {
   const counterPlayerName = s.players[pIdx].name;
 
   if (s.pendingCounter.type === 'drawBonus') {
-    s.drawBonus = { playerId: bonusPlayerId };
+    // drawBonus was already set when the counter was triggered — just return turn to bonus player
     s.currentPlayerIndex = bonusPlayerIdx;
     s.log.push(`${counterPlayerName} passes. ${bonusPlayer.name} may play draw bonus.`);
   } else if (s.pendingCounter.type === 'four-of-a-kind') {
