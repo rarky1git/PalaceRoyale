@@ -376,7 +376,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
 
       {/* Opponents area */}
       <div
-        className="flex p-2 gap-2 shrink-0 overflow-x-auto cursor-pointer select-none"
+        className={`flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {opponents.map(opp => (
@@ -709,7 +709,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini }: {
   player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; mini?: boolean;
 }) {
   return (
-    <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all ${
+    <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
       isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' : 'bg-black/10'
     }`}>
