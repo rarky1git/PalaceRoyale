@@ -1,98 +1,136 @@
-import React, { useState } from 'react';
+import { useNavigate } from 'react-router';
+import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
+import type { GameSettings } from '../contexts/SettingsContext';
 
-interface GameSettings {
-    soundEnabled: boolean;
-    musicEnabled: boolean;
-    fullscreenMode: boolean;
-    particleEffects: boolean;
-    vsyncEnabled: boolean;
-    debugMode: boolean;
+interface SettingRow {
+  key: keyof GameSettings;
+  label: string;
+  description: string;
+  iconOn: React.ReactNode;
+  iconOff: React.ReactNode;
 }
 
+const SETTING_ROWS: SettingRow[] = [
+  {
+    key: 'soundEnabled',
+    label: 'Sound Effects',
+    description: 'Play sounds on card actions',
+    iconOn: <Volume2 className="w-5 h-5 text-yellow-300" />,
+    iconOff: <VolumeX className="w-5 h-5 text-green-500" />,
+  },
+  {
+    key: 'musicEnabled',
+    label: 'Music',
+    description: 'Background music during gameplay',
+    iconOn: <Music className="w-5 h-5 text-yellow-300" />,
+    iconOff: <Music2 className="w-5 h-5 text-green-500" />,
+  },
+  {
+    key: 'fullscreenMode',
+    label: 'Fullscreen',
+    description: 'Expand to full screen',
+    iconOn: <Maximize className="w-5 h-5 text-yellow-300" />,
+    iconOff: <Minimize className="w-5 h-5 text-green-500" />,
+  },
+  {
+    key: 'particleEffects',
+    label: 'Particle Effects',
+    description: 'Animations for slams, wipeouts & sparkles',
+    iconOn: <Sparkles className="w-5 h-5 text-yellow-300" />,
+    iconOff: <Sparkles className="w-5 h-5 text-green-500" />,
+  },
+  {
+    key: 'debugMode',
+    label: 'Debug Mode',
+    description: 'Show game-state info overlay in-game',
+    iconOn: <Bug className="w-5 h-5 text-yellow-300" />,
+    iconOff: <Bug className="w-5 h-5 text-green-500" />,
+  },
+];
+
+const GROUPS: { title: string; keys: Array<keyof GameSettings> }[] = [
+  { title: 'Audio', keys: ['soundEnabled', 'musicEnabled'] },
+  { title: 'Display', keys: ['fullscreenMode', 'particleEffects'] },
+  { title: 'Developer', keys: ['debugMode'] },
+];
+
 export const SettingsPage: React.FC = () => {
-    const [settings, setSettings] = useState<GameSettings>({
-        soundEnabled: true,
-        musicEnabled: true,
-        fullscreenMode: false,
-        particleEffects: true,
-        vsyncEnabled: true,
-        debugMode: false,
-    });
+  const navigate = useNavigate();
+  const { settings, toggleSetting } = useSettings();
 
-    const handleToggle = (key: keyof GameSettings) => {
-        setSettings(prev => ({
-            ...prev,
-            [key]: !prev[key],
-        }));
-        // TODO: Send to game engine
-        console.log(`${key} toggled to:`, !settings[key]);
-    };
-
-    return (
-        <div className="settings-page">
-            <h1>Game Settings</h1>
-            
-            <div className="settings-group">
-                <h2>Audio</h2>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={settings.soundEnabled}
-                        onChange={() => handleToggle('soundEnabled')}
-                    />
-                    Sound Effects
-                </label>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={settings.musicEnabled}
-                        onChange={() => handleToggle('musicEnabled')}
-                    />
-                    Music
-                </label>
-            </div>
-
-            <div className="settings-group">
-                <h2>Graphics</h2>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={settings.fullscreenMode}
-                        onChange={() => handleToggle('fullscreenMode')}
-                    />
-                    Fullscreen Mode
-                </label>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={settings.particleEffects}
-                        onChange={() => handleToggle('particleEffects')}
-                    />
-                    Particle Effects
-                </label>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={settings.vsyncEnabled}
-                        onChange={() => handleToggle('vsyncEnabled')}
-                    />
-                    VSync
-                </label>
-            </div>
-
-            <div className="settings-group">
-                <h2>Developer</h2>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={settings.debugMode}
-                        onChange={() => handleToggle('debugMode')}
-                    />
-                    Debug Mode
-                </label>
-            </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-start p-6 text-white">
+      {/* Header */}
+      <div className="w-full max-w-xs flex items-center gap-3 mb-8">
+        <button
+          onClick={() => navigate('/')}
+          className="text-green-300 hover:text-white text-sm"
+        >
+          ← Back
+        </button>
+        <div className="flex items-center gap-2 flex-1 justify-center">
+          <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+            <Settings className="w-5 h-5 text-yellow-900" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         </div>
-    );
+        <div className="w-10" />
+      </div>
+
+      {/* Settings groups */}
+      <div className="flex flex-col gap-5 w-full max-w-xs">
+        {GROUPS.map(group => {
+          const rows = SETTING_ROWS.filter(r => group.keys.includes(r.key));
+          return (
+            <div key={group.title}>
+              <h2 className="text-xs uppercase tracking-widest text-green-400 mb-2 pl-1">
+                {group.title}
+              </h2>
+              <div className="flex flex-col gap-2">
+                {rows.map(row => {
+                  const isOn = settings[row.key];
+                  return (
+                    <button
+                      key={row.key}
+                      onClick={() => toggleSetting(row.key)}
+                      className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all active:scale-[0.98] ${
+                        isOn
+                          ? 'bg-white/15 border border-yellow-400/30'
+                          : 'bg-white/5 border border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isOn ? row.iconOn : row.iconOff}
+                        <div className="text-left">
+                          <div className={`font-semibold text-sm ${isOn ? 'text-white' : 'text-green-300'}`}>
+                            {row.label}
+                          </div>
+                          <div className="text-xs text-green-400">{row.description}</div>
+                        </div>
+                      </div>
+                      {/* Toggle pill */}
+                      <div
+                        className={`relative w-11 h-6 rounded-full transition-colors ${
+                          isOn ? 'bg-yellow-500' : 'bg-green-700'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            isOn ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 export default SettingsPage;

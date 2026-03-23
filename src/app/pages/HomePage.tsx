@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Crown, Bot, Wifi, BookOpen } from 'lucide-react';
+import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -116,6 +116,16 @@ export default function HomePage() {
             <div className="text-left">
               <div className="font-bold">How to Play</div>
               <div className="text-xs text-green-300">Rules & tips</div>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex items-center gap-3 w-full px-5 py-4 bg-white/10 backdrop-blur rounded-xl hover:bg-white/20 active:scale-[0.98] transition-all"
+          >
+            <Settings className="w-6 h-6 text-green-300" />
+            <div className="text-left">
+              <div className="font-bold">Settings</div>
+              <div className="text-xs text-green-300">Sound, display & more</div>
             </div>
           </button>
         </div>
