@@ -1280,73 +1280,75 @@ export function aiPlayTurn(state: GameState): GameState {
   let s = deepClone(state);
   const player = s.players[s.currentPlayerIndex];
 
-  // Check if AI can steal for any other player
-  // (Only relevant if it's not their turn - but this is called on their turn)
+  // If a bonus action is already pending (e.g., after an opponent passed a counter
+  // for a four-of-a-kind or 10 wipeout bonus), skip the normal play and handle
+  // the bonus directly via the while-loop below.
+  if (!s.waitingForBonus) {
+    const source = getPlayerSource(player, s.drawPile.length === 0);
 
-  const source = getPlayerSource(player, s.drawPile.length === 0);
+    if (source === 'palace-facedown') {
+      // Play first available face-down
+      const slotIdx = player.palace.findIndex(sl => sl.faceDown !== null);
+      if (slotIdx >= 0) {
+        try {
+          return playCards(s, player.id, [player.palace[slotIdx].faceDown!.id]);
+        } catch {
+          return pickupPile(s, player.id);
+        }
+      }
+    }
 
-  if (source === 'palace-facedown') {
-    // Play first available face-down
-    const slotIdx = player.palace.findIndex(sl => sl.faceDown !== null);
-    if (slotIdx >= 0) {
+    const playable = getPlayableCards(s, player.id);
+
+    if (playable.length === 0) {
+      // Try to pick up, but check steal
       try {
-        return playCards(s, player.id, [player.palace[slotIdx].faceDown!.id]);
+        s = pickupPile(s, player.id);
       } catch {
+        // Someone can steal - but in robot mode we handle this differently
+        // For now, force pickup
+        const forcedState = deepClone(s);
+        const fp = forcedState.players[forcedState.currentPlayerIndex];
+        fp.hand = [...fp.hand, ...forcedState.pickupPile];
+        forcedState.pickupPile = [];
+        forcedState.log.push(`${fp.name} picks up the pile.`);
+        advanceTurn(forcedState);
+        forcedState.version++;
+        return forcedState;
+      }
+      return s;
+    }
+
+    // Strategy: play lowest valid cards, prefer multiples
+    // Group by rank
+    const byRank = new Map<number, Card[]>();
+    for (const c of playable) {
+      if (!byRank.has(c.rank)) byRank.set(c.rank, []);
+      byRank.get(c.rank)!.push(c);
+    }
+
+    // Sort ranks by value (play lowest first), but save 2s and 10s
+    const ranks = [...byRank.keys()].sort((a, b) => {
+      const aVal = a === 2 ? 100 : a === 10 ? 99 : a;
+      const bVal = b === 2 ? 100 : b === 10 ? 99 : b;
+      return aVal - bVal;
+    });
+
+    const chosenRank = ranks[0];
+    const chosenCards = byRank.get(chosenRank)!;
+
+    try {
+      s = playCards(s, player.id, chosenCards.map(c => c.id));
+    } catch {
+      try {
         return pickupPile(s, player.id);
+      } catch {
+        return s;
       }
     }
   }
 
-  const playable = getPlayableCards(s, player.id);
-
-  if (playable.length === 0) {
-    // Try to pick up, but check steal
-    try {
-      s = pickupPile(s, player.id);
-    } catch {
-      // Someone can steal - but in robot mode we handle this differently
-      // For now, force pickup
-      const forcedState = deepClone(s);
-      const fp = forcedState.players[forcedState.currentPlayerIndex];
-      fp.hand = [...fp.hand, ...forcedState.pickupPile];
-      forcedState.pickupPile = [];
-      forcedState.log.push(`${fp.name} picks up the pile.`);
-      advanceTurn(forcedState);
-      forcedState.version++;
-      return forcedState;
-    }
-    return s;
-  }
-
-  // Strategy: play lowest valid cards, prefer multiples
-  // Group by rank
-  const byRank = new Map<number, Card[]>();
-  for (const c of playable) {
-    if (!byRank.has(c.rank)) byRank.set(c.rank, []);
-    byRank.get(c.rank)!.push(c);
-  }
-
-  // Sort ranks by value (play lowest first), but save 2s and 10s
-  const ranks = [...byRank.keys()].sort((a, b) => {
-    const aVal = a === 2 ? 100 : a === 10 ? 99 : a;
-    const bVal = b === 2 ? 100 : b === 10 ? 99 : b;
-    return aVal - bVal;
-  });
-
-  const chosenRank = ranks[0];
-  const chosenCards = byRank.get(chosenRank)!;
-
-  try {
-    s = playCards(s, player.id, chosenCards.map(c => c.id));
-  } catch {
-    try {
-      return pickupPile(s, player.id);
-    } catch {
-      return s;
-    }
-  }
-
-  // Handle bonus actions
+  // Handle bonus actions (pre-existing or triggered by playCards above)
   while (s.waitingForBonus) {
     const bp = s.players[s.currentPlayerIndex];
     const bonusPlayable = getBonusPlayableCards(s, bp.id);
