@@ -65,7 +65,7 @@ export function PalaceDisplay({
                       highlight={isCurrentPlayer && canPlayFaceUp}
                     />
                   ) : (
-                    <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} rounded-lg border border-dashed border-gray-200/20`} />
+                    <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200/20`} />
                   )}
                 </div>
               )}
@@ -83,7 +83,7 @@ export function PalaceDisplay({
                     highlight={isCurrentPlayer && canPlayFaceDown && !slot.faceUp}
                   />
                 ) : (
-                  <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} rounded-lg border border-dashed border-gray-200`} />
+                  <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200`} />
                 )}
               </div>
             </div>

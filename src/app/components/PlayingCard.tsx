@@ -20,9 +20,9 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
       <button
         onClick={onClick}
         disabled={disabled && !onClick}
-        className={`${w} rounded-lg border-2 flex items-center justify-center cursor-pointer
+        className={`${w} ${mini ? 'rounded border' : 'rounded-lg border-2'} flex items-center justify-center cursor-pointer
           ${highlight ? 'border-yellow-400 bg-gradient-to-br from-blue-700 to-blue-900 shadow-lg shadow-yellow-400/30 animate-pulse' : 'border-gray-400 bg-gradient-to-br from-blue-600 to-blue-800'}
-          ${selected ? 'ring-2 ring-yellow-400 -translate-y-2' : ''}
+          ${selected ? `${mini ? 'ring-1' : 'ring-2'} ring-yellow-400 -translate-y-2` : ''}
           ${onClick && !disabled ? 'hover:brightness-110 active:scale-95' : ''}
           transition-all shrink-0`}
       >
