@@ -872,7 +872,8 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     return s;
   }
 
-  // Normal - check elimination and advance turn
+  // Normal - ensure player still has minimum of 3 cards, then check elimination and advance turn
+  drawCards(s, playerId);
   if (handleElimination(s, playerId)) {
     s.lastAction = { type: 'play', cards, playerId };
     s.version++;
