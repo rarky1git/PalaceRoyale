@@ -5,7 +5,7 @@ import {
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
   canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
   playCards, playBonusAction, pickupPile, stealTurn,
-  playDrawBonus, skipDrawBonus,
+  playDrawBonus,
   playCounter, passCounter, getCounterPlayableCards, aiHandleCounter,
   selectFaceDownCards, selectFaceUpCards,
   aiSetup, aiPlayTurn, checkAISteal,
@@ -221,8 +221,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   };
 
   const myStealCards = isPlaying && !isMyTurn ? canStealTurn(gameState, myPlayerId) : null;
-  const canPlay = isMyTurn && isPlaying && !isEliminated;
   const hasDrawBonus = !!(gameState.drawBonus && gameState.drawBonus.playerId === myPlayerId);
+  // Allow play when it's our turn OR when we have an active draw bonus (simultaneous action window)
+  const canPlay = (isMyTurn || hasDrawBonus) && isPlaying && !isEliminated;
   const hasPendingCounter = !!(gameState.pendingCounter && isMyTurn);
   const counterPlayableCardIds = hasPendingCounter
     ? getCounterPlayableCards(gameState, myPlayerId).map(c => c.id)
@@ -464,13 +465,13 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
             </div>
           )}
           {isPlaying && !isFinished && (
-            <div className={`text-sm font-medium px-3 py-1 rounded-full ${isMyTurn ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
+            <div className={`text-sm font-medium px-3 py-1 rounded-full ${(isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
               {isEliminated
                 ? "You're safe! Watching..."
                 : hasPendingCounter
-                  ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to keep going or pass'}`
+                  ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to counter or pick up pile'}`
                   : hasDrawBonus
-                    ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s or skip`
+                    ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
                     : isMyTurn
                       ? (gameState.waitingForBonus
                         ? `Bonus action (${gameState.waitingForBonus.type === '2' ? 'play a card' : 'start new pile'})`
@@ -516,9 +517,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
         )}
       </div>
 
-      {/* My area - highlighted when my turn */}
+      {/* My area - highlighted when my turn or draw bonus available */}
       <div className={`shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 ${
-        isMyTurn && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
+        (isMyTurn || hasDrawBonus) && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
       }`}>
         {/* My Palace - centered during setup/active, hidden when empty during play */}
         {showPalace && (
@@ -531,7 +532,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
               selectedCards={selectedCards}
               onCardClick={(card) => toggleCard(card.id)}
               onFaceDownClick={handleFaceDownPlay}
-              playerName={isMyTurn && isPlaying ? `⭐ ${me.name}'s Palace` : `${me.name}'s Palace`}
+              playerName={(isMyTurn || hasDrawBonus) && isPlaying ? `⭐ ${me.name}'s Palace` : `${me.name}'s Palace`}
               centered={palaceIsActive}
               showRotation
             />
@@ -625,21 +626,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 >
                   Play
                 </button>
-                {hasDrawBonus && (
+                {hasPendingCounter && gameState.pendingCounter?.type === 'drawBonus' && (
                   <button
-                    onClick={() => {
-                      try {
-                        const newState = skipDrawBonus(gameState, myPlayerId);
-                        setSelectedCards([]);
-                        onStateChange(newState);
-                      } catch (e: any) { setError(e.message); }
-                    }}
-                    className="px-4 py-1.5 bg-gray-600 text-white rounded-lg font-bold text-sm hover:bg-gray-500 active:scale-95 transition-all"
+                    onClick={handlePickup}
+                    className="px-4 py-1.5 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-500 active:scale-95 transition-all"
                   >
-                    Skip
+                    Pick Up
                   </button>
                 )}
-                {hasPendingCounter && (
+                {hasPendingCounter && gameState.pendingCounter?.type === 'four-of-a-kind' && (
                   <button
                     onClick={() => {
                       try {
