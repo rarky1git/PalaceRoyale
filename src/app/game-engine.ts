@@ -763,11 +763,14 @@ export function pickupPile(state: GameState, playerId: string): GameState {
 
   if (pIdx !== s.currentPlayerIndex) throw new Error('Not your turn');
 
-  // Check if anyone can steal first
-  for (const otherPlayer of s.players) {
-    if (otherPlayer.id === playerId) continue;
-    if (canStealTurn(s, otherPlayer.id)) {
-      throw new Error(`Turn must be stolen by ${otherPlayer.name} (four of a kind available)`);
+  // Skip steal check during counter scenarios (player is forced to pick up)
+  if (!s.pendingCounter) {
+    // Check if anyone can steal first
+    for (const otherPlayer of s.players) {
+      if (otherPlayer.id === playerId) continue;
+      if (canStealTurn(s, otherPlayer.id)) {
+        throw new Error(`Turn must be stolen by ${otherPlayer.name} (four of a kind available)`);
+      }
     }
   }
 
@@ -776,6 +779,7 @@ export function pickupPile(state: GameState, playerId: string): GameState {
   s.pickupPile = [];
   s.waitingForBonus = null;
   s.drawBonus = null;
+  s.pendingCounter = null;
   s.lastAction = { type: 'pickup', playerId };
 
   advanceTurn(s);
@@ -1203,6 +1207,10 @@ export function aiHandleCounter(state: GameState): GameState {
       try {
         return playCounter(s, player.id, [playable[0].id]);
       } catch {
+        // For drawBonus, pick up pile instead of passing
+        if (s.pendingCounter?.type === 'drawBonus') {
+          return pickupPile(s, player.id);
+        }
         return passCounter(s, player.id);
       }
     }
@@ -1224,11 +1232,19 @@ export function aiHandleCounter(state: GameState): GameState {
       try {
         return playCounter(s, player.id, counterCards.map(c => c.id));
       } catch {
+        // For drawBonus, pick up pile instead of passing
+        if (s.pendingCounter?.type === 'drawBonus') {
+          return pickupPile(s, player.id);
+        }
         return passCounter(s, player.id);
       }
     }
   }
 
+  // For drawBonus counter, pick up pile instead of passing
+  if (s.pendingCounter?.type === 'drawBonus') {
+    return pickupPile(s, player.id);
+  }
   return passCounter(s, player.id);
 }
 

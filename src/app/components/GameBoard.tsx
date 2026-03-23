@@ -5,7 +5,7 @@ import {
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
   canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
   playCards, playBonusAction, pickupPile, stealTurn,
-  playDrawBonus, skipDrawBonus,
+  playDrawBonus,
   playCounter, passCounter, getCounterPlayableCards, aiHandleCounter,
   selectFaceDownCards, selectFaceUpCards,
   aiSetup, aiPlayTurn, checkAISteal,
@@ -446,9 +446,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
               {isEliminated
                 ? "You're safe! Watching..."
                 : hasPendingCounter
-                  ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to keep going or pass'}`
+                  ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to counter or pick up pile'}`
                   : hasDrawBonus
-                    ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s or skip`
+                    ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
                     : isMyTurn
                       ? (gameState.waitingForBonus
                         ? `Bonus action (${gameState.waitingForBonus.type === '2' ? 'play a card' : 'start new pile'})`
@@ -603,21 +603,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 >
                   Play
                 </button>
-                {hasDrawBonus && (
+                {hasPendingCounter && gameState.pendingCounter?.type === 'drawBonus' && (
                   <button
-                    onClick={() => {
-                      try {
-                        const newState = skipDrawBonus(gameState, myPlayerId);
-                        setSelectedCards([]);
-                        onStateChange(newState);
-                      } catch (e: any) { setError(e.message); }
-                    }}
-                    className="px-4 py-1.5 bg-gray-600 text-white rounded-lg font-bold text-sm hover:bg-gray-500 active:scale-95 transition-all"
+                    onClick={handlePickup}
+                    className="px-4 py-1.5 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-500 active:scale-95 transition-all"
                   >
-                    Skip
+                    Pick Up
                   </button>
                 )}
-                {hasPendingCounter && (
+                {hasPendingCounter && gameState.pendingCounter?.type === 'four-of-a-kind' && (
                   <button
                     onClick={() => {
                       try {
