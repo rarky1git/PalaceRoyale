@@ -9,7 +9,7 @@ const API = `https://${projectId}.supabase.co/functions/v1/make-server-990c827f`
 export default function LobbyPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { action, playerName, playerCount, code: joinCode } = location.state || {};
+  const { action, playerName, playerCount, deckCount, code: joinCode } = location.state || {};
 
   const [gameCode, setGameCode] = useState('');
   const [playerId, setPlayerId] = useState('');
@@ -102,7 +102,7 @@ export default function LobbyPage() {
   const startGame = async () => {
     // Host starts the game
     const playerNames = players.map(p => p.name);
-    const state = initGame(playerNames, 0);
+    const state = initGame(playerNames, 0, deckCount ?? 1);
     try {
       const res = await fetch(`${API}/games/${gameCode}`, {
         method: 'PUT', headers,

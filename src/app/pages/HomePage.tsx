@@ -5,6 +5,7 @@ import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
 export default function HomePage() {
   const navigate = useNavigate();
   const [playerCount, setPlayerCount] = useState(2);
+  const [deckCount, setDeckCount] = useState(1);
   const [playerName, setPlayerName] = useState('');
   const [mode, setMode] = useState<'menu' | 'robot-setup' | 'multi-setup'>('menu');
   const [gameCode, setGameCode] = useState('');
@@ -54,7 +55,7 @@ export default function HomePage() {
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
     if (multiAction === 'create') {
-      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerCount } });
+      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerCount, deckCount } });
     } else {
       if (!gameCode.trim()) return;
       navigate('/lobby', { state: { action: 'join', playerName: playerName.trim(), code: gameCode.trim().toUpperCase() } });
@@ -188,18 +189,34 @@ export default function HomePage() {
             </button>
           </div>
           {multiAction === 'create' && (
-            <div>
-              <label className="text-sm text-green-300 mb-1 block">Total Players</label>
-              <div className="flex gap-2">
-                {[2, 3, 4, 5].map(n => (
-                  <button
-                    key={n}
-                    onClick={() => setPlayerCount(n)}
-                    className={`flex-1 py-2 rounded-lg font-bold transition-all ${playerCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
-                  >
-                    {n}
-                  </button>
-                ))}
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-sm text-green-300 mb-1 block">Total Players</label>
+                <div className="flex gap-2">
+                  {[2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setPlayerCount(n)}
+                      className={`flex-1 py-2 rounded-lg font-bold transition-all ${playerCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-green-300 mb-1 block">Card Decks</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setDeckCount(n)}
+                      className={`flex-1 py-2 rounded-lg font-bold transition-all ${deckCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
