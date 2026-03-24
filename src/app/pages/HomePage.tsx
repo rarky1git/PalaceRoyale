@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
+import { MAX_DECKS, MAX_PLAYERS_PER_DECK } from '../game-engine';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -193,7 +194,7 @@ export default function HomePage() {
               <div>
                 <label className="text-sm text-green-300 mb-1 block">Total Players</label>
                 <div className="flex gap-2">
-                  {[2, 3, 4, 5].map(n => (
+                  {Array.from({ length: deckCount * MAX_PLAYERS_PER_DECK - 1 }, (_, i) => i + 2).map(n => (
                     <button
                       key={n}
                       onClick={() => setPlayerCount(n)}
@@ -207,10 +208,13 @@ export default function HomePage() {
               <div>
                 <label className="text-sm text-green-300 mb-1 block">Card Decks</label>
                 <div className="flex gap-2">
-                  {[1, 2, 3].map(n => (
+                  {Array.from({ length: MAX_DECKS }, (_, i) => i + 1).map(n => (
                     <button
                       key={n}
-                      onClick={() => setDeckCount(n)}
+                      onClick={() => {
+                        setDeckCount(n);
+                        setPlayerCount(prev => Math.min(prev, n * MAX_PLAYERS_PER_DECK));
+                      }}
                       className={`flex-1 py-2 rounded-lg font-bold transition-all ${deckCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
                     >
                       {n}

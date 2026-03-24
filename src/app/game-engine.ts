@@ -76,6 +76,7 @@ export function cardValue(rank: number): number {
 // ---- Deck ----
 
 export const MAX_DECKS = 3;
+export const MAX_PLAYERS_PER_DECK = 5;
 
 export function createDeck(deckIndex: number = 0): Card[] {
   const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
