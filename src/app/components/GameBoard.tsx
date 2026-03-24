@@ -45,9 +45,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
-  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | null>(null);
+  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | null>(null);
+  const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
+  const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
+  const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
   const { settings } = useSettings();
@@ -86,9 +89,27 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setTimeout(() => setAnimEffect(null), 4500);
         }
       }
+      if (action?.type === 'palace-invalid' && action.cards?.[0]) {
+        const playerName = gameState.players.find(p => p.id === action.playerId)?.name ?? '';
+        setPalaceInvalidCard(action.cards[0]);
+        setPalaceInvalidPlayerName(playerName);
+        setAnimEffect('palace-invalid');
+        if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
+        palaceInvalidTimerRef.current = setTimeout(() => {
+          setAnimEffect(null);
+          setPalaceInvalidCard(null);
+          setPalaceInvalidPlayerName('');
+          palaceInvalidTimerRef.current = null;
+        }, 3200);
+      }
       prevVersionRef.current = gameState.version;
     }
   }, [gameState.version, settings.particleEffects]);
+
+  // Cleanup palace-invalid timer on unmount
+  useEffect(() => () => {
+    if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
+  }, []);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -408,6 +429,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             </motion.div>
           </motion.div>
         )}
+
       </AnimatePresence>
 
       {/* Debug overlay */}
@@ -482,10 +504,42 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                   </motion.div>
                 );
               })}
-              {pileCards.length === 0 && (
+              {pileCards.length === 0 && !palaceInvalidCard && (
                 <div className="w-16 h-24 rounded-lg border-2 border-dashed border-green-600 flex items-center justify-center">
                   <span className="text-green-500 text-xs">Empty</span>
                 </div>
+              )}
+              {/* Palace-invalid: animate the revealed card at the pile position */}
+              {animEffect === 'palace-invalid' && palaceInvalidCard && (
+                <motion.div
+                  key="palace-invalid-pile"
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ zIndex: 10 }}
+                  animate={{
+                    scale: [0.5, 1.08, 1],
+                    opacity: [0, 1, 1, 0],
+                    x: [0, 0, 0, -14, 14, -14, 14, -7, 0],
+                  }}
+                  transition={{
+                    scale: { duration: 0.4, times: [0, 0.4, 1] },
+                    opacity: { duration: 3.2, times: [0, 0.05, 0.85, 1] },
+                    x: { duration: 1.3, times: [0, 0.12, 0.22, 0.38, 0.52, 0.64, 0.76, 0.88, 1] },
+                  }}
+                >
+                  <div className="relative">
+                    <PileCard card={palaceInvalidCard} />
+                    {/* Red tint overlay */}
+                    <motion.div
+                      className="absolute inset-0 rounded-lg pointer-events-none"
+                      animate={{ opacity: [0, 0, 0.65, 0.65, 0] }}
+                      transition={{ duration: 3.2, times: [0, 0.05, 0.12, 0.85, 1] }}
+                      style={{
+                        background: 'rgba(220, 38, 38, 0.65)',
+                        boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
+                      }}
+                    />
+                  </div>
+                </motion.div>
               )}
             </div>
             <span className="text-[10px] text-green-300">
@@ -523,20 +577,22 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             </div>
           )}
           {isPlaying && !isFinished && (
-            <div className={`text-sm font-medium px-3 py-1 rounded-full ${(isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
-              {isEliminated
-                ? "You're safe! Watching..."
-                : hasPendingCounter
-                  ? 'Counter! Play to counter or pick up pile'
-                  : hasDrawBonus
-                    ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
-                    : isMyTurn
-                      ? (gameState.waitingForBonus
-                        ? `Bonus action (${gameState.waitingForBonus.type === '2' ? 'play a card' : 'start new pile'})`
-                        : 'Your turn!')
-                      : gameState.pendingCounter && !isMyTurn
-                        ? `${currentPlayer?.name} may counter ${gameState.players.find(p => p.id === gameState.pendingCounter!.bonusPlayerId)?.name}'s bonus`
-                        : `${currentPlayer?.name}'s turn`}
+            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
+              {animEffect === 'palace-invalid'
+                ? `❌ ${palaceInvalidPlayerName} picks up the pile!`
+                : isEliminated
+                  ? "You're safe! Watching..."
+                  : hasPendingCounter
+                    ? 'Counter! Play to counter or pick up pile'
+                    : hasDrawBonus
+                      ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
+                      : isMyTurn
+                        ? (gameState.waitingForBonus
+                          ? `Bonus action (${gameState.waitingForBonus.type === '2' ? 'play a card' : 'start new pile'})`
+                          : 'Your turn!')
+                        : gameState.pendingCounter && !isMyTurn
+                          ? `${currentPlayer?.name} may counter ${gameState.players.find(p => p.id === gameState.pendingCounter!.bonusPlayerId)?.name}'s bonus`
+                          : `${currentPlayer?.name}'s turn`}
             </div>
           )}
           {isSetup && (
