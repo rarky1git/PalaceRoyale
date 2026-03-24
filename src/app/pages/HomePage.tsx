@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
 
@@ -12,10 +12,19 @@ export default function HomePage() {
   const [playerEmoji, setPlayerEmoji] = useState(() => {
     try { return localStorage.getItem('palace-player-emoji') || '🦆'; } catch { return '🦆'; }
   });
+  const [showCustomEmojiInput, setShowCustomEmojiInput] = useState(false);
+  const customEmojiInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<'menu' | 'robot-setup' | 'multi-setup'>('menu');
   const [gameCode, setGameCode] = useState('');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
   const [savedGames, setSavedGames] = useState<{ code: string; playerId: string }[]>([]);
+
+  // Auto-focus the custom emoji input when it becomes visible
+  useEffect(() => {
+    if (showCustomEmojiInput && customEmojiInputRef.current) {
+      customEmojiInputRef.current.focus();
+    }
+  }, [showCustomEmojiInput]);
 
   // Check for saved games on mount
   useState(() => {
@@ -35,6 +44,28 @@ export default function HomePage() {
   const selectEmoji = (emoji: string) => {
     setPlayerEmoji(emoji);
     try { localStorage.setItem('palace-player-emoji', emoji); } catch { /* ignore */ }
+  };
+
+  const handleCustomEmojiInput = (value: string) => {
+    if (!value) return;
+    // Extract the first grapheme cluster (handles multi-codepoint emoji like flags, skin tones)
+    try {
+      const segmenter = new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' });
+      const segments = [...segmenter.segment(value)] as { segment: string }[];
+      const emojiSeg = segments.find(s => /\p{Extended_Pictographic}/u.test(s.segment));
+      const first = emojiSeg?.segment ?? segments[0]?.segment;
+      if (first) {
+        selectEmoji(first);
+        setShowCustomEmojiInput(false);
+      }
+    } catch {
+      // Fallback: take the first two code points (covers most composed emoji sequences)
+      const first = Array.from(value).slice(0, 2).join('');
+      if (first) {
+        selectEmoji(first);
+        setShowCustomEmojiInput(false);
+      }
+    }
   };
 
   const rejoinGame = async (code: string, playerId: string) => {
@@ -76,6 +107,8 @@ export default function HomePage() {
     }
   };
 
+  const isCustomEmoji = !PLAYER_EMOJIS.includes(playerEmoji);
+
   const EmojiPicker = () => (
     <div>
       <label className="text-sm text-green-300 mb-1 block">Your emoji</label>
@@ -83,7 +116,7 @@ export default function HomePage() {
         {PLAYER_EMOJIS.map(e => (
           <button
             key={e}
-            onClick={() => selectEmoji(e)}
+            onClick={() => { selectEmoji(e); setShowCustomEmojiInput(false); }}
             className={`w-9 h-9 rounded-lg text-xl flex items-center justify-center transition-all active:scale-90 ${
               playerEmoji === e ? 'bg-yellow-500 ring-2 ring-yellow-300' : 'bg-white/10 hover:bg-white/20'
             }`}
@@ -91,6 +124,33 @@ export default function HomePage() {
             {e}
           </button>
         ))}
+        {/* Custom emoji button – shows the user's custom emoji when set, otherwise a "+" */}
+        {showCustomEmojiInput ? (
+          <input
+            ref={customEmojiInputRef}
+            type="text"
+            // `inputmode` with value "emoji" is non-standard but triggers the emoji keyboard
+            // on many Android browsers; iOS falls back to the regular keyboard where the user
+            // can tap the globe/emoji key.
+            inputMode={"emoji" as any}
+            maxLength={8}
+            placeholder="😀"
+            onChange={e => handleCustomEmojiInput(e.target.value)}
+            onBlur={() => setShowCustomEmojiInput(false)}
+            onKeyDown={e => { if (e.key === 'Escape') setShowCustomEmojiInput(false); }}
+            className="w-9 h-9 rounded-lg text-xl text-center bg-white/20 ring-2 ring-yellow-400 outline-none caret-transparent"
+          />
+        ) : (
+          <button
+            onClick={() => setShowCustomEmojiInput(true)}
+            className={`w-9 h-9 rounded-lg text-xl flex items-center justify-center transition-all active:scale-90 ${
+              isCustomEmoji ? 'bg-yellow-500 ring-2 ring-yellow-300' : 'bg-white/10 hover:bg-white/20'
+            }`}
+            title="Enter a custom emoji"
+          >
+            {isCustomEmoji ? playerEmoji : '✏️'}
+          </button>
+        )}
       </div>
     </div>
   );
