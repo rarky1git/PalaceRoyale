@@ -9,7 +9,7 @@ const API = `https://${projectId}.supabase.co/functions/v1/make-server-990c827f`
 export default function LobbyPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { action, playerName, playerEmoji, playerCount, code: joinCode } = location.state || {};
+  const { action, playerName, playerEmoji, playerCount, deckCount, code: joinCode } = location.state || {};
 
   const [gameCode, setGameCode] = useState('');
   const [playerId, setPlayerId] = useState('');
@@ -110,7 +110,7 @@ export default function LobbyPage() {
     // Assign emojis: use known emoji for local player, default for remote players
     // (remote player emojis are synced individually when each player opens the game)
     const emojis = players.map(p => playerEmojiMap[p.id] || '🦆');
-    const state = initGame(playerNames, 0, emojis);
+    const state = initGame(playerNames, 0, emojis, deckCount ?? 1);
     try {
       const res = await fetch(`${API}/games/${gameCode}`, {
         method: 'PUT', headers,

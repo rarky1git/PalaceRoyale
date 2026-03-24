@@ -77,12 +77,15 @@ export function cardValue(rank: number): number {
 
 // ---- Deck ----
 
-export function createDeck(): Card[] {
+export const MAX_DECKS = 3;
+export const MAX_PLAYERS_PER_DECK = 5;
+
+export function createDeck(deckIndex: number = 0): Card[] {
   const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
   const cards: Card[] = [];
   for (const suit of suits) {
     for (let rank = 2; rank <= 14; rank++) {
-      cards.push({ id: `${rank}-${suit}`, suit, rank });
+      cards.push({ id: `${deckIndex}-${rank}-${suit}`, suit, rank });
     }
   }
   return cards;
@@ -99,8 +102,13 @@ export function shuffle<T>(arr: T[]): T[] {
 
 // ---- Game Init ----
 
-export function initGame(playerNames: string[], dealerIndex: number = 0, playerEmojis?: string[]): GameState {
-  const deck = shuffle(createDeck());
+export function initGame(playerNames: string[], dealerIndex: number = 0, numberOfDecks: number = 1, playerEmojis?: string[]): GameState {
+  const clampedDecks = Math.max(1, Math.min(MAX_DECKS, numberOfDecks));
+  const combined: Card[] = [];
+  for (let d = 0; d < clampedDecks; d++) {
+    combined.push(...createDeck(d));
+  }
+  const deck = shuffle(combined);
   const players: Player[] = playerNames.map((name, i) => ({
     id: `player-${i}`,
     name,
