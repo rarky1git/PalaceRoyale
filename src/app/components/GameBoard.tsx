@@ -349,7 +349,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const pileCards = gameState.pickupPile.slice(-6);
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-hidden relative">
+    <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
       {/* Animation overlays */}
       <AnimatePresence>
         {animEffect === 'slam' && (
@@ -517,7 +517,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-visible">
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
@@ -672,7 +672,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* My area - highlighted when my turn or draw bonus available */}
-      <div className={`shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 ${
+      <div className={`shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
         (isMyTurn || hasDrawBonus) && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
       }`}>
         {/* My Palace - centered during setup/active, hidden when empty during play */}
@@ -693,8 +693,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
         )}
 
-        {/* My Hand / Setup Cards - 2-row grid, horizontal scroll when > 10 cards */}
-        <div className="flex flex-col items-center gap-1">
+        {/* My Hand / Setup Cards - 2-row grid */}
+        <div className="flex flex-col items-center gap-1 overflow-visible">
           <span className="text-[10px] text-green-300 font-medium">
             {isSetup
               ? me.setupPhase === 'select-facedown'
@@ -709,7 +709,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
             </span>
           )}
-          <div className="overflow-x-auto w-full">
+          <div className="overflow-visible w-full">
             <div
               className="grid gap-1 pt-4 pb-2 mx-auto"
               style={{
