@@ -10,11 +10,11 @@ export default function RobotGamePage() {
   const navigate = useNavigate();
   const { playerNames, playerEmojis, dealerIndex } = location.state || { playerNames: ['You', 'Bot 1'], playerEmojis: ['🦆', '🤖'], dealerIndex: 0 };
 
-  const [gameState, setGameState] = useState<GameState>(() => initGame(playerNames, dealerIndex, playerEmojis));
+  const [gameState, setGameState] = useState<GameState>(() => initGame(playerNames, dealerIndex, 1, playerEmojis));
   const [showHelp, setShowHelp] = useState(false);
 
   const handleRestart = () => {
-    setGameState(initGame(playerNames, dealerIndex, playerEmojis));
+    setGameState(initGame(playerNames, dealerIndex, 1, playerEmojis));
   };
 
   return (

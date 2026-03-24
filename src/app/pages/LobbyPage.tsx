@@ -110,7 +110,7 @@ export default function LobbyPage() {
     // Assign emojis: use known emoji for local player, default for remote players
     // (remote player emojis are synced individually when each player opens the game)
     const emojis = players.map(p => playerEmojiMap[p.id] || '🦆');
-    const state = initGame(playerNames, 0, emojis, deckCount ?? 1);
+    const state = initGame(playerNames, 0, deckCount ?? 1, emojis);
     try {
       const res = await fetch(`${API}/games/${gameCode}`, {
         method: 'PUT', headers,
