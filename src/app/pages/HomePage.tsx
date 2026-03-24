@@ -193,12 +193,12 @@ export default function HomePage() {
             <div className="flex flex-col gap-4">
               <div>
                 <label className="text-sm text-green-300 mb-1 block">Total Players</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {Array.from({ length: deckCount * MAX_PLAYERS_PER_DECK - 1 }, (_, i) => i + 2).map(n => (
                     <button
                       key={n}
                       onClick={() => setPlayerCount(n)}
-                      className={`flex-1 py-2 rounded-lg font-bold transition-all ${playerCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
+                      className={`flex-1 basis-[calc(20%-0.4rem)] py-2 rounded-lg font-bold transition-all ${playerCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
                     >
                       {n}
                     </button>
@@ -207,7 +207,7 @@ export default function HomePage() {
               </div>
               <div>
                 <label className="text-sm text-green-300 mb-1 block">Card Decks</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {Array.from({ length: MAX_DECKS }, (_, i) => i + 1).map(n => (
                     <button
                       key={n}
@@ -215,7 +215,7 @@ export default function HomePage() {
                         setDeckCount(n);
                         setPlayerCount(prev => Math.min(prev, n * MAX_PLAYERS_PER_DECK));
                       }}
-                      className={`flex-1 py-2 rounded-lg font-bold transition-all ${deckCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
+                      className={`flex-1 basis-[calc(20%-0.4rem)] py-2 rounded-lg font-bold transition-all ${deckCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
                     >
                       {n}
                     </button>
