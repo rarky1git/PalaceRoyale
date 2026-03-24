@@ -246,6 +246,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const opponents = gameState.players.filter(p => p.id !== myPlayerId);
   const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
 
+  // Hand grid: fill rows first; 1 row for ≤6 cards, 2 rows for more (scroll horizontally)
+  const displayCardCount = isSetup ? me.setupCards.length : sortedHand.length;
+  const useDoubleRow = displayCardCount > 6;
+  const handGridCols = useDoubleRow ? Math.ceil(displayCardCount / 2) : Math.max(1, displayCardCount);
+
   // Pile cards for display (show up to 5 beneath top card)
   const pileCards = gameState.pickupPile.slice(-6);
 
@@ -550,10 +555,16 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
             </span>
           )}
-          <div
-            className="grid grid-flow-col gap-1 overflow-x-auto pt-4 pb-2 w-full auto-cols-min"
-            style={{ gridTemplateRows: 'repeat(2, auto)' }}
-          >
+          <div className="overflow-x-auto w-full">
+            <div
+              className="grid gap-1 pt-4 pb-2 mx-auto"
+              style={{
+                gridAutoFlow: 'row',
+                gridTemplateRows: useDoubleRow ? 'repeat(2, auto)' : 'auto',
+                gridTemplateColumns: `repeat(${handGridCols}, min-content)`,
+                width: 'max-content',
+              }}
+            >
             {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => (
               <PlayingCard
                 key={card.id}
@@ -593,6 +604,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 </motion.div>
               );
             })}
+            </div>
           </div>
         </div>
 
