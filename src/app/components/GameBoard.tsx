@@ -243,7 +243,22 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
     )
     : [];
 
-  const opponents = gameState.players.filter(p => p.id !== myPlayerId);
+  const myPlayerIndex = gameState.players.findIndex(p => p.id === myPlayerId);
+  const totalPlayers = gameState.players.length;
+  const prevOpponent = totalPlayers > 1
+    ? gameState.players[(myPlayerIndex - 1 + totalPlayers) % totalPlayers]
+    : null;
+  const nextOpponent = totalPlayers > 2
+    ? gameState.players[(myPlayerIndex + 1) % totalPlayers]
+    : null;
+  const otherOpponents = gameState.players.filter(
+    p => p.id !== myPlayerId && p.id !== prevOpponent?.id && p.id !== nextOpponent?.id
+  );
+  const opponents = [
+    ...(prevOpponent ? [prevOpponent] : []),
+    ...(nextOpponent ? [nextOpponent] : []),
+    ...otherOpponents,
+  ];
   const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
 
   // Hand grid: fill rows first; 1 row for ≤6 cards, 2 rows for more (scroll horizontally)
@@ -379,7 +394,32 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
         className={`flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none`}
         onClick={() => setMiniOpponents(v => !v)}
       >
-        {opponents.map(opp => (
+        {prevOpponent && (
+          <>
+            <OpponentView
+              key={prevOpponent.id}
+              player={prevOpponent}
+              isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
+              isSetup={isSetup}
+              isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
+              mini={miniOpponents}
+              isBeforePlayer
+            />
+            <div className={`shrink-0 ${miniOpponents ? 'w-4' : 'w-8'}`} />
+          </>
+        )}
+        {nextOpponent && (
+          <OpponentView
+            key={nextOpponent.id}
+            player={nextOpponent}
+            isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === nextOpponent.id}
+            isSetup={isSetup}
+            isEliminated={(gameState.eliminated || []).includes(nextOpponent.id)}
+            mini={miniOpponents}
+            isAfterPlayer
+          />
+        )}
+        {otherOpponents.map(opp => (
           <OpponentView
             key={opp.id}
             player={opp}
@@ -699,13 +739,17 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini }: {
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBeforePlayer, isAfterPlayer }: {
   player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; mini?: boolean;
+  isBeforePlayer?: boolean; isAfterPlayer?: boolean;
 }) {
   return (
     <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
-      isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' : 'bg-black/10'
+      isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
+      isBeforePlayer ? 'bg-purple-500/20' :
+      isAfterPlayer ? 'bg-green-500/20' :
+      'bg-black/10'
     }`}>
       <span className="text-[10px] font-bold truncate max-w-26">
         {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
