@@ -36,7 +36,7 @@ export interface GameState {
   winner: string | null;
   eliminated: string[]; // players who cleared all cards (safe)
   loser: string | null; // last player standing = loser
-  lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle'; cards?: Card[]; playerId?: string } | null;
+  lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle' | 'palace-invalid'; cards?: Card[]; playerId?: string } | null;
   drawBonus?: { playerId: string } | null; // After playing from hand and drawing, can play cards matching pile top rank
   pendingCounter?: {
     type: 'drawBonus' | 'four-of-a-kind';
@@ -495,6 +495,7 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
       s.pickupPile = [];
       s.log.push(`${cardDisplay(card)} can't be played! ${player.name} picks up the pile.`);
       advanceTurn(s);
+      s.lastAction = { type: 'palace-invalid', cards: [card], playerId };
       s.version++;
       return s;
     }
@@ -648,6 +649,7 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
         s.waitingForBonus = null;
         s.log.push(`${cardDisplay(card)} can't be played! ${player.name} picks up the pile.`);
         advanceTurn(s);
+        s.lastAction = { type: 'palace-invalid', cards: [card], playerId };
         s.version++;
         return s;
       }

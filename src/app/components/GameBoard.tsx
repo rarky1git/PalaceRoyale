@@ -43,7 +43,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
-  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | null>(null);
+  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | null>(null);
+  const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const [miniOpponents, setMiniOpponents] = useState(false);
@@ -82,6 +83,14 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
           setAnimEffect('wipeout');
           setTimeout(() => setAnimEffect(null), 4500);
         }
+      }
+      if (action?.type === 'palace-invalid' && action.cards?.[0]) {
+        setPalaceInvalidCard(action.cards[0]);
+        setAnimEffect('palace-invalid');
+        setTimeout(() => {
+          setAnimEffect(null);
+          setPalaceInvalidCard(null);
+        }, 2200);
       }
       prevVersionRef.current = gameState.version;
     }
@@ -348,6 +357,61 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
             >
               WIPEOUT!
             </motion.div>
+          </motion.div>
+        )}
+        {animEffect === 'palace-invalid' && palaceInvalidCard && (
+          <motion.div
+            key="palace-invalid"
+            className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Dark backdrop */}
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="flex flex-col items-center gap-3 z-10">
+              {/* Card: scale in, then shake, with red overlay */}
+              <motion.div
+                className="relative"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{
+                  scale: [0.5, 1.08, 1, 1, 1, 1, 1, 1, 1],
+                  opacity: [0, 1, 1, 1, 1, 1, 1, 1, 1],
+                  x: [0, 0, 0, -14, 14, -14, 14, -7, 0],
+                }}
+                transition={{
+                  duration: 1.3,
+                  times: [0, 0.12, 0.22, 0.38, 0.52, 0.64, 0.76, 0.88, 1],
+                }}
+              >
+                {/* Red tint overlay */}
+                <motion.div
+                  className="absolute inset-0 z-10 rounded-lg pointer-events-none"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7] }}
+                  transition={{
+                    duration: 1.3,
+                    times: [0, 0.18, 0.28, 0.38, 0.52, 0.64, 0.76, 0.88, 1],
+                  }}
+                  style={{
+                    background: 'rgba(220, 38, 38, 0.65)',
+                    boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
+                  }}
+                />
+                <PlayingCard card={palaceInvalidCard} small />
+              </motion.div>
+              {/* "Pick up the pile!" label */}
+              <motion.div
+                className="text-red-300 font-black text-base px-3 py-1 rounded-full bg-black/60"
+                style={{ textShadow: '0 0 10px rgba(255,80,80,0.9)' }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, 0] }}
+                transition={{ duration: 2.2, times: [0, 0.15, 0.7, 1] }}
+              >
+                ❌ Pick up the pile!
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
