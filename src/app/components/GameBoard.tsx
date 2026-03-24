@@ -581,7 +581,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       }`}>
         {/* My Palace - centered during setup/active, hidden when empty during play */}
         {showPalace && (
-          <div className={`transition-all duration-300 ${palaceIsActive ? 'flex justify-center' : ''}`}>
+          <div className={`transition-all duration-300 overflow-visible ${palaceIsActive ? 'flex justify-center' : ''}`}>
             <PalaceDisplay
               palace={me.palace}
               isCurrentPlayer={canPlay}
