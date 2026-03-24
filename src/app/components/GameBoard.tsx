@@ -455,7 +455,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0">
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
@@ -576,7 +576,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* My area - highlighted when my turn or draw bonus available */}
-      <div className={`shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 ${
+      <div className={`shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
         (isMyTurn || hasDrawBonus) && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
       }`}>
         {/* My Palace - centered during setup/active, hidden when empty during play */}
