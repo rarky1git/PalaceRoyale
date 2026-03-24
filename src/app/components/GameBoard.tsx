@@ -6,7 +6,7 @@ import {
   canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
   playCards, playBonusAction, pickupPile, stealTurn,
   playDrawBonus,
-  playCounter, passCounter, getCounterPlayableCards, aiHandleCounter,
+  playCounter, getCounterPlayableCards, aiHandleCounter,
   selectFaceDownCards, selectFaceUpCards,
   aiSetup, aiPlayTurn, checkAISteal,
   deepClone,
@@ -527,7 +527,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               {isEliminated
                 ? "You're safe! Watching..."
                 : hasPendingCounter
-                  ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to counter or pick up pile'}`
+                  ? 'Counter! Play to counter or pick up pile'
                   : hasDrawBonus
                     ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
                     : isMyTurn
@@ -684,20 +684,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                     className="px-4 py-1.5 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-500 active:scale-95 transition-all"
                   >
                     Pick Up
-                  </button>
-                )}
-                {hasPendingCounter && gameState.pendingCounter?.type === 'four-of-a-kind' && (
-                  <button
-                    onClick={() => {
-                      try {
-                        const newState = passCounter(gameState, myPlayerId);
-                        setSelectedCards([]);
-                        onStateChange(newState);
-                      } catch (e: any) { setError(e.message); }
-                    }}
-                    className="px-4 py-1.5 bg-orange-600 text-white rounded-lg font-bold text-sm hover:bg-orange-500 active:scale-95 transition-all"
-                  >
-                    Pass
                   </button>
                 )}
                 {!gameState.waitingForBonus && !hasDrawBonus && !hasPendingCounter && (

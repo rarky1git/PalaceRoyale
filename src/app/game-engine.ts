@@ -40,9 +40,9 @@ export interface GameState {
   lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle' | 'nudge'; cards?: Card[]; playerId?: string } | null;
   drawBonus?: { playerId: string } | null; // After playing from hand and drawing, can play cards matching pile top rank
   pendingCounter?: {
-    type: 'drawBonus' | 'four-of-a-kind';
+    type: 'drawBonus';
     bonusPlayerId: string;
-  } | null; // Next player can counter a bonus by playing a valid card
+  } | null; // Next player can counter a draw bonus by playing a valid card
   nudgeCount?: number; // Incremented when a non-current player nudges the current player
 }
 
@@ -350,19 +350,13 @@ function getNextActivePlayerIndex(state: GameState, fromIndex: number): number {
   return fromIndex;
 }
 
-// Set four-of-a-kind bonus with counter opportunity for next player
+// Set four-of-a-kind bonus — no counter allowed, bonus player acts immediately
 function setFourOfAKindBonus(s: GameState, playerId: string): void {
   const playerIdx = s.players.findIndex(p => p.id === playerId);
-  const nextIdx = getNextActivePlayerIndex(s, playerIdx);
-  if (nextIdx !== playerIdx) {
-    s.pendingCounter = { type: 'four-of-a-kind', bonusPlayerId: playerId };
-    s.currentPlayerIndex = nextIdx;
-    const bonusPlayer = s.players[playerIdx];
-    const counterPlayer = s.players[nextIdx];
-    s.log.push(`${bonusPlayer.name} gets bonus turn. ${counterPlayer.name} may counter or pass.`);
-  } else {
-    s.waitingForBonus = { type: 'four-of-a-kind' };
-  }
+  const bonusPlayer = s.players[playerIdx];
+  s.waitingForBonus = { type: 'four-of-a-kind' };
+  s.currentPlayerIndex = playerIdx;
+  s.log.push(`${bonusPlayer.name} gets bonus turn. No counter allowed.`);
 }
 
 // If the current player's hand has a card matching the pile top rank, set drawBonus and return true.
@@ -982,8 +976,9 @@ export function stealTurn(state: GameState, stealingPlayerId: string, cardIds: s
 }
 
 // ---- Counter Mechanic ----
-// When drawBonus or four-of-a-kind bonus triggers, the next player gets a chance
+// When drawBonus triggers, the next player gets a chance
 // to "counter" by playing a valid card, skipping the bonus entirely.
+// Note: four-of-a-kind bonuses cannot be countered.
 
 // Counter player plays a valid card, cancelling the pending bonus
 export function playCounter(state: GameState, playerId: string, cardIds: string[]): GameState {
@@ -996,87 +991,53 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
 
   const player = s.players[pIdx];
   const source = getPlayerSource(player, s.drawPile.length === 0);
-  const counterType = s.pendingCounter.type;
   let cards: Card[];
 
-  if (counterType === 'four-of-a-kind') {
-    // Pile is empty after wipeout - any card is valid to start new pile
-    if (source === 'palace-facedown') {
-      if (cardIds.length !== 1) throw new Error('Must play exactly one card');
-      const slotIdx = player.palace.findIndex(sl => sl.faceDown && cardIds.includes(sl.faceDown.id));
-      if (slotIdx === -1) throw new Error('Card not found');
-      const card = player.palace[slotIdx].faceDown!;
-      cards = [card];
-      player.palace[slotIdx].faceDown = null;
+  // drawBonus counter - must play a valid card on the existing pile
+  const topCard = getTopCard(s.pickupPile);
+
+  if (source === 'palace-facedown') {
+    if (cardIds.length !== 1) throw new Error('Must play exactly one card');
+    const slotIdx = player.palace.findIndex(sl => sl.faceDown && cardIds.includes(sl.faceDown.id));
+    if (slotIdx === -1) throw new Error('Card not found');
+    const card = player.palace[slotIdx].faceDown!;
+    cards = [card];
+
+    s.log.push(`${player.name} counters! Blindly reveals ${cardDisplay(card)}.`);
+    player.palace[slotIdx].faceDown = null;
+
+    if (!canPlayCardOnPile(card, topCard)) {
+      // Invalid blind counter - pick up pile
       s.pickupPile.push(card);
-      s.log.push(`${player.name} counters! Plays ${cardDisplay(card)} to start a new pile.`);
-    } else {
-      cards = cardIds.map(id => {
-        if (source === 'hand') {
-          const c = player.hand.find(c => c.id === id);
-          if (!c) throw new Error('Card not in hand');
-          return c;
-        } else {
-          for (const slot of player.palace) {
-            if (slot.faceUp?.id === id) return slot.faceUp;
-          }
-          throw new Error('Card not found');
-        }
-      });
-      if (!cards.every(c => c.rank === cards[0].rank)) throw new Error('All cards must be same rank');
-      for (const card of cards) {
-        s.pickupPile.push(card);
-      }
-      removeCardsFromPlayer(player, cardIds, s.drawPile.length === 0);
-      s.log.push(`${player.name} counters! Plays ${cards.map(cardDisplay).join(', ')} to start a new pile.`);
+      player.hand = [...player.hand, ...s.pickupPile];
+      s.pickupPile = [];
+      s.pendingCounter = null;
+      s.log.push(`${cardDisplay(card)} can't be played! ${player.name} picks up the pile.`);
+      advanceTurn(s);
+      s.version++;
+      return s;
     }
+    s.pickupPile.push(card);
   } else {
-    // drawBonus counter - must play a valid card on the existing pile
-    const topCard = getTopCard(s.pickupPile);
-
-    if (source === 'palace-facedown') {
-      if (cardIds.length !== 1) throw new Error('Must play exactly one card');
-      const slotIdx = player.palace.findIndex(sl => sl.faceDown && cardIds.includes(sl.faceDown.id));
-      if (slotIdx === -1) throw new Error('Card not found');
-      const card = player.palace[slotIdx].faceDown!;
-      cards = [card];
-
-      s.log.push(`${player.name} counters! Blindly reveals ${cardDisplay(card)}.`);
-      player.palace[slotIdx].faceDown = null;
-
-      if (!canPlayCardOnPile(card, topCard)) {
-        // Invalid blind counter - pick up pile
-        s.pickupPile.push(card);
-        player.hand = [...player.hand, ...s.pickupPile];
-        s.pickupPile = [];
-        s.pendingCounter = null;
-        s.log.push(`${cardDisplay(card)} can't be played! ${player.name} picks up the pile.`);
-        advanceTurn(s);
-        s.version++;
-        return s;
-      }
-      s.pickupPile.push(card);
-    } else {
-      cards = cardIds.map(id => {
-        if (source === 'hand') {
-          const c = player.hand.find(c => c.id === id);
-          if (!c) throw new Error('Card not in hand');
-          return c;
-        } else {
-          for (const slot of player.palace) {
-            if (slot.faceUp?.id === id) return slot.faceUp;
-          }
-          throw new Error('Card not found');
+    cards = cardIds.map(id => {
+      if (source === 'hand') {
+        const c = player.hand.find(c => c.id === id);
+        if (!c) throw new Error('Card not in hand');
+        return c;
+      } else {
+        for (const slot of player.palace) {
+          if (slot.faceUp?.id === id) return slot.faceUp;
         }
-      });
-      if (!cards.every(c => c.rank === cards[0].rank)) throw new Error('All cards must be same rank');
-      if (!canPlayCardOnPile(cards[0], topCard)) throw new Error('Cannot play this card on the pile');
-      for (const card of cards) {
-        s.pickupPile.push(card);
+        throw new Error('Card not found');
       }
-      removeCardsFromPlayer(player, cardIds, s.drawPile.length === 0);
-      s.log.push(`${player.name} counters! Plays ${cards.map(cardDisplay).join(', ')}.`);
+    });
+    if (!cards.every(c => c.rank === cards[0].rank)) throw new Error('All cards must be same rank');
+    if (!canPlayCardOnPile(cards[0], topCard)) throw new Error('Cannot play this card on the pile');
+    for (const card of cards) {
+      s.pickupPile.push(card);
     }
+    removeCardsFromPlayer(player, cardIds, s.drawPile.length === 0);
+    s.log.push(`${player.name} counters! Plays ${cards.map(cardDisplay).join(', ')}.`);
   }
 
   // Clear the pending counter - bonus is cancelled
@@ -1176,10 +1137,6 @@ export function passCounter(state: GameState, playerId: string): GameState {
     // drawBonus was already set when the counter was triggered — just return turn to bonus player
     s.currentPlayerIndex = bonusPlayerIdx;
     s.log.push(`${counterPlayerName} passes. ${bonusPlayer.name} may play draw bonus.`);
-  } else if (s.pendingCounter.type === 'four-of-a-kind') {
-    s.waitingForBonus = { type: 'four-of-a-kind' };
-    s.currentPlayerIndex = bonusPlayerIdx;
-    s.log.push(`${counterPlayerName} passes. ${bonusPlayer.name} gets bonus turn.`);
   }
 
   s.pendingCounter = null;
@@ -1192,14 +1149,6 @@ export function getCounterPlayableCards(state: GameState, playerId: string): Car
   if (!state.pendingCounter) return [];
   const player = state.players.find(p => p.id === playerId)!;
   const source = getPlayerSource(player, state.drawPile.length === 0);
-
-  if (state.pendingCounter.type === 'four-of-a-kind') {
-    // Pile is empty - any card works
-    if (source === 'hand') return [...player.hand];
-    if (source === 'palace-faceup') return player.palace.filter(s => s.faceUp).map(s => s.faceUp!);
-    if (source === 'palace-facedown') return player.palace.filter(s => s.faceDown).map(s => s.faceDown!);
-    return [];
-  }
 
   if (state.pendingCounter.type === 'drawBonus') {
     // Must play valid card on existing pile
@@ -1231,11 +1180,7 @@ export function aiHandleCounter(state: GameState): GameState {
       try {
         return playCounter(s, player.id, [playable[0].id]);
       } catch {
-        // For drawBonus, pick up pile instead of passing
-        if (s.pendingCounter?.type === 'drawBonus') {
-          return pickupPile(s, player.id);
-        }
-        return passCounter(s, player.id);
+        return pickupPile(s, player.id);
       }
     }
 
@@ -1256,20 +1201,13 @@ export function aiHandleCounter(state: GameState): GameState {
       try {
         return playCounter(s, player.id, counterCards.map(c => c.id));
       } catch {
-        // For drawBonus, pick up pile instead of passing
-        if (s.pendingCounter?.type === 'drawBonus') {
-          return pickupPile(s, player.id);
-        }
-        return passCounter(s, player.id);
+        return pickupPile(s, player.id);
       }
     }
   }
 
-  // For drawBonus counter, pick up pile instead of passing
-  if (s.pendingCounter?.type === 'drawBonus') {
-    return pickupPile(s, player.id);
-  }
-  return passCounter(s, player.id);
+  // No valid counter cards available - pick up pile
+  return pickupPile(s, player.id);
 }
 
 // ---- AI ----
