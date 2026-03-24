@@ -246,11 +246,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const opponents = gameState.players.filter(p => p.id !== myPlayerId);
   const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
 
-  // When hand > 12, separate active (playable) cards from inactive for compact display
-  const shouldMinimize = isPlaying && source === 'hand' && sortedHand.length > 12 && canPlay;
-  const activeCards = shouldMinimize ? sortedHand.filter(c => playableCardIds.includes(c.id)) : sortedHand;
-  const inactiveCards = shouldMinimize ? sortedHand.filter(c => !playableCardIds.includes(c.id)) : [];
-
   // Pile cards for display (show up to 5 beneath top card)
   const pileCards = gameState.pickupPile.slice(-6);
 
@@ -539,7 +534,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
           </div>
         )}
 
-        {/* My Hand / Setup Cards - overflow visible */}
+        {/* My Hand / Setup Cards - 2-row grid, horizontal scroll when > 10 cards */}
         <div className="flex flex-col items-center gap-1">
           <span className="text-[10px] text-green-300 font-medium">
             {isSetup
@@ -550,7 +545,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 : 'Setup complete'
               : `Hand (${me.hand.length})`}
           </span>
-          <div className="flex flex-wrap justify-center gap-1 max-w-full overflow-visible pt-3 pb-1">
+          {isPlaying && source !== 'hand' && me.hand.length === 0 && (
+            <span className="text-green-400 text-xs italic py-1">
+              {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
+            </span>
+          )}
+          <div
+            className="grid grid-flow-col gap-1 overflow-x-auto pt-4 pb-2 w-full auto-cols-min"
+            style={{ gridTemplateRows: 'repeat(2, auto)' }}
+          >
             {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => (
               <PlayingCard
                 key={card.id}
@@ -569,7 +572,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 onClick={() => toggleCard(card.id)}
               />
             ))}
-            {isPlaying && source === 'hand' && activeCards.map(card => {
+            {isPlaying && source === 'hand' && sortedHand.map(card => {
               const isPlayable = playableCardIds.includes(card.id);
               const isSelected = selectedCards.includes(card.id);
               const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;
@@ -590,27 +593,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 </motion.div>
               );
             })}
-            {isPlaying && source !== 'hand' && me.hand.length === 0 && (
-              <span className="text-green-400 text-xs italic">
-                {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
-              </span>
-            )}
-            {/* Minimized inactive cards row */}
-            {shouldMinimize && inactiveCards.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-0.5 max-w-full px-1">
-                <span className="text-[8px] text-green-500/60 w-full text-center mb-0.5">
-                  Inactive ({inactiveCards.length})
-                </span>
-                {inactiveCards.map(card => (
-                  <PlayingCard
-                    key={card.id}
-                    card={card}
-                    mini
-                    disabled
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
