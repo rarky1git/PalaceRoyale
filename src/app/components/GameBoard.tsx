@@ -363,61 +363,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
             </motion.div>
           </motion.div>
         )}
-        {animEffect === 'palace-invalid' && palaceInvalidCard && (
-          <motion.div
-            key="palace-invalid"
-            className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {/* Dark backdrop */}
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="flex flex-col items-center gap-3 z-10">
-              {/* Card: scale in, then shake, with red overlay */}
-              <motion.div
-                className="relative"
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{
-                  scale: [0.5, 1.08, 1, 1, 1, 1, 1, 1, 1],
-                  opacity: [0, 1, 1, 1, 1, 1, 1, 1, 1],
-                  x: [0, 0, 0, -14, 14, -14, 14, -7, 0],
-                }}
-                transition={{
-                  duration: 1.3,
-                  times: [0, 0.12, 0.22, 0.38, 0.52, 0.64, 0.76, 0.88, 1],
-                }}
-              >
-                {/* Red tint overlay */}
-                <motion.div
-                  className="absolute inset-0 z-10 rounded-lg pointer-events-none"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 0, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7] }}
-                  transition={{
-                    duration: 1.3,
-                    times: [0, 0.18, 0.28, 0.38, 0.52, 0.64, 0.76, 0.88, 1],
-                  }}
-                  style={{
-                    background: 'rgba(220, 38, 38, 0.65)',
-                    boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
-                  }}
-                />
-                <PlayingCard card={palaceInvalidCard} small />
-              </motion.div>
-              {/* "[Name] picks up the pile!" label */}
-              <motion.div
-                className="text-red-300 font-black text-base px-3 py-1 rounded-full bg-black/60"
-                style={{ textShadow: '0 0 10px rgba(255,80,80,0.9)' }}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, 0] }}
-                transition={{ duration: 3.2, times: [0, 0.1, 0.75, 1] }}
-              >
-                ❌ {palaceInvalidPlayerName} picks up the pile!
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
+
       </AnimatePresence>
 
       {/* Debug overlay */}
@@ -492,10 +438,42 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                   </motion.div>
                 );
               })}
-              {pileCards.length === 0 && (
+              {pileCards.length === 0 && !palaceInvalidCard && (
                 <div className="w-16 h-24 rounded-lg border-2 border-dashed border-green-600 flex items-center justify-center">
                   <span className="text-green-500 text-xs">Empty</span>
                 </div>
+              )}
+              {/* Palace-invalid: animate the revealed card at the pile position */}
+              {animEffect === 'palace-invalid' && palaceInvalidCard && (
+                <motion.div
+                  key="palace-invalid-pile"
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ zIndex: 10 }}
+                  animate={{
+                    scale: [0.5, 1.08, 1],
+                    opacity: [0, 1, 1, 0],
+                    x: [0, 0, 0, -14, 14, -14, 14, -7, 0],
+                  }}
+                  transition={{
+                    scale: { duration: 0.4, times: [0, 0.4, 1] },
+                    opacity: { duration: 3.2, times: [0, 0.05, 0.85, 1] },
+                    x: { duration: 1.3, times: [0, 0.12, 0.22, 0.38, 0.52, 0.64, 0.76, 0.88, 1] },
+                  }}
+                >
+                  <div className="relative">
+                    <PileCard card={palaceInvalidCard} />
+                    {/* Red tint overlay */}
+                    <motion.div
+                      className="absolute inset-0 rounded-lg pointer-events-none"
+                      animate={{ opacity: [0, 0, 0.65, 0.65, 0] }}
+                      transition={{ duration: 3.2, times: [0, 0.05, 0.12, 0.85, 1] }}
+                      style={{
+                        background: 'rgba(220, 38, 38, 0.65)',
+                        boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
+                      }}
+                    />
+                  </div>
+                </motion.div>
               )}
             </div>
             <span className="text-[10px] text-green-300">
@@ -533,20 +511,22 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
             </div>
           )}
           {isPlaying && !isFinished && (
-            <div className={`text-sm font-medium px-3 py-1 rounded-full ${(isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
-              {isEliminated
-                ? "You're safe! Watching..."
-                : hasPendingCounter
-                  ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to counter or pick up pile'}`
-                  : hasDrawBonus
-                    ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
-                    : isMyTurn
-                      ? (gameState.waitingForBonus
-                        ? `Bonus action (${gameState.waitingForBonus.type === '2' ? 'play a card' : 'start new pile'})`
-                        : 'Your turn!')
-                      : gameState.pendingCounter && !isMyTurn
-                        ? `${currentPlayer?.name} may counter ${gameState.players.find(p => p.id === gameState.pendingCounter!.bonusPlayerId)?.name}'s bonus`
-                        : `${currentPlayer?.name}'s turn`}
+            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
+              {animEffect === 'palace-invalid'
+                ? `❌ ${palaceInvalidPlayerName} picks up the pile!`
+                : isEliminated
+                  ? "You're safe! Watching..."
+                  : hasPendingCounter
+                    ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to counter or pick up pile'}`
+                    : hasDrawBonus
+                      ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
+                      : isMyTurn
+                        ? (gameState.waitingForBonus
+                          ? `Bonus action (${gameState.waitingForBonus.type === '2' ? 'play a card' : 'start new pile'})`
+                          : 'Your turn!')
+                        : gameState.pendingCounter && !isMyTurn
+                          ? `${currentPlayer?.name} may counter ${gameState.players.find(p => p.id === gameState.pendingCounter!.bonusPlayerId)?.name}'s bonus`
+                          : `${currentPlayer?.name}'s turn`}
             </div>
           )}
           {isSetup && (
