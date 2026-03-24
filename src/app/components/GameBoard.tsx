@@ -6,10 +6,11 @@ import {
   canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
   playCards, playBonusAction, pickupPile, stealTurn,
   playDrawBonus,
-  playCounter, passCounter, getCounterPlayableCards, aiHandleCounter,
+  playCounter, getCounterPlayableCards, aiHandleCounter,
   selectFaceDownCards, selectFaceUpCards,
   aiSetup, aiPlayTurn, checkAISteal,
   deepClone,
+  setPlayerEmoji, nudgeCurrentPlayer,
 } from '../game-engine';
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
@@ -36,9 +37,10 @@ interface GameBoardProps {
   myPlayerId: string;
   onStateChange: (state: GameState) => void;
   isMultiplayer?: boolean;
+  playerEmoji?: string; // Local player's chosen emoji (for multiplayer emoji sync)
 }
 
-export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer }: GameBoardProps) {
+export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji }: GameBoardProps) {
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
@@ -48,6 +50,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
+  const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
   const { settings } = useSettings();
 
@@ -90,22 +94,50 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setAnimEffect('palace-invalid');
-        setTimeout(() => {
+        if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
+        palaceInvalidTimerRef.current = setTimeout(() => {
           setAnimEffect(null);
           setPalaceInvalidCard(null);
           setPalaceInvalidPlayerName('');
+          palaceInvalidTimerRef.current = null;
         }, 3200);
       }
       prevVersionRef.current = gameState.version;
     }
   }, [gameState.version, settings.particleEffects]);
 
+  // Cleanup palace-invalid timer on unmount
+  useEffect(() => () => {
+    if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
+  }, []);
+
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
     if (isMultiplayer && isSetup) return; // Don't clear during multiplayer setup
+    if (gameState.lastAction?.type === 'nudge') return; // Don't clear on nudge
     setSelectedCards([]);
     setError('');
   }, [gameState.version]);
+
+  // Sync local player emoji to game state when game starts playing or emoji preference changes.
+  // me.emoji in deps allows retry if a multiplayer conflict reset the emoji.
+  useEffect(() => {
+    if (!isPlaying || !me) return;
+    const emoji = playerEmoji || '🦆';
+    if (me.emoji !== emoji) {
+      onStateChange(setPlayerEmoji(gameState, myPlayerId, emoji));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, playerEmoji, me?.emoji]);
+
+  // Play quack when current player receives a nudge
+  useEffect(() => {
+    const newNudgeCount = gameState.nudgeCount ?? 0;
+    if (newNudgeCount > prevNudgeCountRef.current && isMyTurn && isPlaying) {
+      playQuack();
+    }
+    prevNudgeCountRef.current = newNudgeCount;
+  }, [gameState.nudgeCount, gameState.version, isMyTurn, isPlaying]);
 
   // AI turns for robot mode
   useEffect(() => {
@@ -142,6 +174,40 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
     }, 800);
     return () => clearTimeout(timer);
   }, [gameState.version, isSetup, isMultiplayer]);
+
+  const playQuack = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx() as AudioContext;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      const t = ctx.currentTime;
+      // Quack: pitch drops sharply then a second shorter quack
+      osc.frequency.setValueAtTime(480, t);
+      osc.frequency.exponentialRampToValueAtTime(200, t + 0.08);
+      osc.frequency.setValueAtTime(420, t + 0.11);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.22);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.28, t + 0.01);
+      gain.gain.setValueAtTime(0.28, t + 0.07);
+      gain.gain.linearRampToValueAtTime(0, t + 0.09);
+      gain.gain.linearRampToValueAtTime(0.18, t + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+      osc.start(t);
+      osc.stop(t + 0.3);
+      osc.onended = () => ctx.close();
+    } catch { /* ignore */ }
+  };
+
+  const handleNudge = () => {
+    playQuack();
+    const newState = nudgeCurrentPlayer(gameState);
+    onStateChange(newState);
+  };
 
   const toggleCard = (cardId: string) => {
     setError('');
@@ -259,10 +325,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const opponents = gameState.players.filter(p => p.id !== myPlayerId);
   const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
 
-  // When hand > 12, separate active (playable) cards from inactive for compact display
-  const shouldMinimize = isPlaying && source === 'hand' && sortedHand.length > 12 && canPlay;
-  const activeCards = shouldMinimize ? sortedHand.filter(c => playableCardIds.includes(c.id)) : sortedHand;
-  const inactiveCards = shouldMinimize ? sortedHand.filter(c => !playableCardIds.includes(c.id)) : [];
+  // Hand grid: fill rows first; 1 row for ≤6 cards, 2 rows for more (scroll horizontally)
+  const displayCardCount = isSetup ? me.setupCards.length : sortedHand.length;
+  const useDoubleRow = displayCardCount > 6;
+  const handGridCols = useDoubleRow ? Math.ceil(displayCardCount / 2) : Math.max(1, displayCardCount);
 
   // Pile cards for display (show up to 5 beneath top card)
   const pileCards = gameState.pickupPile.slice(-6);
@@ -517,7 +583,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 : isEliminated
                   ? "You're safe! Watching..."
                   : hasPendingCounter
-                    ? `Counter! ${gameState.pendingCounter!.type === 'four-of-a-kind' ? 'Play a card or pass' : 'Play to counter or pick up pile'}`
+                    ? 'Counter! Play to counter or pick up pile'
                     : hasDrawBonus
                       ? `Bonus! Play your ${getRankDisplay(drawBonusRank!)}s`
                       : isMyTurn
@@ -587,7 +653,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
           </div>
         )}
 
-        {/* My Hand / Setup Cards - overflow visible */}
+        {/* My Hand / Setup Cards - 2-row grid, horizontal scroll when > 10 cards */}
         <div className="flex flex-col items-center gap-1">
           <span className="text-[10px] text-green-300 font-medium">
             {isSetup
@@ -598,7 +664,21 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 : 'Setup complete'
               : `Hand (${me.hand.length})`}
           </span>
-          <div className="flex flex-wrap justify-center gap-1 max-w-full overflow-visible pt-3 pb-1">
+          {isPlaying && source !== 'hand' && me.hand.length === 0 && (
+            <span className="text-green-400 text-xs italic py-1">
+              {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
+            </span>
+          )}
+          <div className="overflow-x-auto w-full">
+            <div
+              className="grid gap-1 pt-4 pb-2 mx-auto"
+              style={{
+                gridAutoFlow: 'row',
+                gridTemplateRows: useDoubleRow ? 'repeat(2, auto)' : 'auto',
+                gridTemplateColumns: `repeat(${handGridCols}, min-content)`,
+                width: 'max-content',
+              }}
+            >
             {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => (
               <PlayingCard
                 key={card.id}
@@ -617,7 +697,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 onClick={() => toggleCard(card.id)}
               />
             ))}
-            {isPlaying && source === 'hand' && activeCards.map(card => {
+            {isPlaying && source === 'hand' && sortedHand.map(card => {
               const isPlayable = playableCardIds.includes(card.id);
               const isSelected = selectedCards.includes(card.id);
               const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;
@@ -638,27 +718,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 </motion.div>
               );
             })}
-            {isPlaying && source !== 'hand' && me.hand.length === 0 && (
-              <span className="text-green-400 text-xs italic">
-                {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
-              </span>
-            )}
-            {/* Minimized inactive cards row */}
-            {shouldMinimize && inactiveCards.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-0.5 max-w-full px-1">
-                <span className="text-[8px] text-green-500/60 w-full text-center mb-0.5">
-                  Inactive ({inactiveCards.length})
-                </span>
-                {inactiveCards.map(card => (
-                  <PlayingCard
-                    key={card.id}
-                    card={card}
-                    mini
-                    disabled
-                  />
-                ))}
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -682,20 +742,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                     Pick Up
                   </button>
                 )}
-                {hasPendingCounter && gameState.pendingCounter?.type === 'four-of-a-kind' && (
-                  <button
-                    onClick={() => {
-                      try {
-                        const newState = passCounter(gameState, myPlayerId);
-                        setSelectedCards([]);
-                        onStateChange(newState);
-                      } catch (e: any) { setError(e.message); }
-                    }}
-                    className="px-4 py-1.5 bg-orange-600 text-white rounded-lg font-bold text-sm hover:bg-orange-500 active:scale-95 transition-all"
-                  >
-                    Pass
-                  </button>
-                )}
                 {!gameState.waitingForBonus && !hasDrawBonus && !hasPendingCounter && (
                   <button
                     onClick={handlePickup}
@@ -713,6 +759,16 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 className="px-4 py-1.5 bg-purple-600 text-white rounded-lg font-bold text-sm animate-pulse hover:bg-purple-500 active:scale-95 transition-all"
               >
                 Steal! (4 of a kind)
+              </button>
+            )}
+            {/* Nudge button: visible to all non-current players */}
+            {isPlaying && !isMyTurn && !isEliminated && currentPlayer && (
+              <button
+                onClick={handleNudge}
+                className="px-3 py-1.5 bg-white/10 text-xl rounded-lg hover:bg-white/20 active:scale-90 transition-all"
+                title={`Nudge ${currentPlayer.name}`}
+              >
+                {currentPlayer.emoji || '🦆'}
               </button>
             )}
           </div>

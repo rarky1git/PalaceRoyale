@@ -1,5 +1,7 @@
 # PalaceRoyale
 
+![version](https://img.shields.io/badge/version-0.5.0-yellow)
+
 A web-based implementation of the **Palace** card game (also known as Scum or Shed), playable solo against AI or with friends in real-time multiplayer.
 
 🃏 **Live:** https://palace-royale.vercel.app
@@ -10,7 +12,12 @@ A web-based implementation of the **Palace** card game (also known as Scum or Sh
 
 - **Single-player** — play against AI bots with full Palace rule enforcement
 - **Multiplayer** — create or join a lobby with a 6-character code, real-time state sync via Supabase
-- **Full rule engine** — draw bonuses, counters, eliminations, card rank 2–Ace
+- **Rejoin multiplayer** — resume a disconnected game from the home screen
+- **Full rule engine** — draw bonuses, counters, four-of-a-kind slams, eliminations, card rank 2–Ace
+- **Particle effects** — visual animations for slams, wipeouts, and sparkles
+- **Emoji avatars** — pick or enter a custom emoji to represent your player
+- **How to Play** — in-app rules and tips page
+- **Settings** — toggle sound effects, background music, fullscreen, particle effects, and debug overlay (all persisted locally)
 - **Responsive UI** — works on desktop and mobile
 
 ## Tech Stack
@@ -57,7 +64,9 @@ src/
 ├── app/
 │   ├── game-engine.ts       # Core Palace rules engine + AI logic
 │   ├── components/          # GameBoard, PlayingCard, UI primitives
-│   └── pages/               # HomePage, RobotGamePage, MultiplayerGamePage, LobbyPage
+│   ├── contexts/            # SettingsContext (persistent game settings)
+│   └── pages/               # HomePage, RobotGamePage, MultiplayerGamePage,
+│                            #   LobbyPage, HowToPlayPage, SettingsPage
 supabase/
 └── functions/server/        # Deno Edge Function (Hono) — game lobby API
 utils/supabase/              # Supabase client config

@@ -8,13 +8,13 @@ import { HelpCircle } from 'lucide-react';
 export default function RobotGamePage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { playerNames, dealerIndex } = location.state || { playerNames: ['You', 'Bot 1'], dealerIndex: 0 };
+  const { playerNames, playerEmojis, dealerIndex } = location.state || { playerNames: ['You', 'Bot 1'], playerEmojis: ['🦆', '🤖'], dealerIndex: 0 };
 
-  const [gameState, setGameState] = useState<GameState>(() => initGame(playerNames, dealerIndex));
+  const [gameState, setGameState] = useState<GameState>(() => initGame(playerNames, dealerIndex, playerEmojis));
   const [showHelp, setShowHelp] = useState(false);
 
   const handleRestart = () => {
-    setGameState(initGame(playerNames, dealerIndex));
+    setGameState(initGame(playerNames, dealerIndex, playerEmojis));
   };
 
   return (
@@ -35,6 +35,7 @@ export default function RobotGamePage() {
           gameState={gameState}
           myPlayerId="player-0"
           onStateChange={setGameState}
+          playerEmoji={playerEmojis?.[0]}
         />
       </div>
     </div>
