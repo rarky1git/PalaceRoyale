@@ -105,7 +105,7 @@ export default function MultiplayerGamePage() {
         <div className="bg-red-600/80 text-white text-xs text-center py-1">{syncError}</div>
       )}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-visible">
         <GameBoard
           gameState={gameState}
           myPlayerId={playerId}

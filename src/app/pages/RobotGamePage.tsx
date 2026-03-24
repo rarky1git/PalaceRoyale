@@ -30,7 +30,7 @@ export default function RobotGamePage() {
         </div>
       </div>
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-visible">
         <GameBoard
           gameState={gameState}
           myPlayerId="player-0"

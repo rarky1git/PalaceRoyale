@@ -455,7 +455,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-visible">
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
@@ -597,8 +597,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
         )}
 
-        {/* My Hand / Setup Cards - 2-row grid, horizontal scroll when > 10 cards */}
-        <div className="flex flex-col items-center gap-1">
+        {/* My Hand / Setup Cards - 2-row grid */}
+        <div className="flex flex-col items-center gap-1 overflow-visible">
           <span className="text-[10px] text-green-300 font-medium">
             {isSetup
               ? me.setupPhase === 'select-facedown'
@@ -613,7 +613,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
             </span>
           )}
-          <div className="overflow-x-auto w-full">
+          <div className="overflow-visible w-full">
             <div
               className="grid gap-1 pt-4 pb-2 mx-auto"
               style={{
