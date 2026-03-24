@@ -646,25 +646,27 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           )}
         </div>
 
-        {/* Action Log (toggleable) */}
-        <div className="w-full max-w-sm">
-          <button
-            onClick={() => setShowLog(!showLog)}
-            className="text-[9px] text-green-400 hover:text-green-300 mb-0.5"
-          >
-            {showLog ? 'Hide Log ▲' : 'Show Log ▼'}
-          </button>
-          {showLog && (
-            <div
-              ref={logRef}
-              className="w-full max-h-20 overflow-y-auto bg-black/30 rounded-lg p-2 text-[10px] leading-tight space-y-0.5"
+        {/* Action Log (debug mode only) */}
+        {settings.debugMode && (
+          <div className="w-full max-w-sm">
+            <button
+              onClick={() => setShowLog(!showLog)}
+              className="text-[9px] text-green-400 hover:text-green-300 mb-0.5"
             >
-              {gameState.log.slice(-10).map((msg, i) => (
-                <div key={i} className="text-green-200">{msg}</div>
-              ))}
-            </div>
-          )}
-        </div>
+              {showLog ? 'Hide Log ▲' : 'Show Log ▼'}
+            </button>
+            {showLog && (
+              <div
+                ref={logRef}
+                className="w-full max-h-20 overflow-y-auto bg-black/30 rounded-lg p-2 text-[10px] leading-tight space-y-0.5"
+              >
+                {gameState.log.slice(-10).map((msg, i) => (
+                  <div key={i} className="text-green-200">{msg}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="text-red-400 text-xs bg-red-900/40 px-3 py-1 rounded">{error}</div>
