@@ -45,6 +45,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
   const [showHelp, setShowHelp] = useState(false);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
+  const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const [miniOpponents, setMiniOpponents] = useState(false);
@@ -85,12 +86,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
         }
       }
       if (action?.type === 'palace-invalid' && action.cards?.[0]) {
+        const playerName = gameState.players.find(p => p.id === action.playerId)?.name ?? '';
         setPalaceInvalidCard(action.cards[0]);
+        setPalaceInvalidPlayerName(playerName);
         setAnimEffect('palace-invalid');
         setTimeout(() => {
           setAnimEffect(null);
           setPalaceInvalidCard(null);
-        }, 2200);
+          setPalaceInvalidPlayerName('');
+        }, 3200);
       }
       prevVersionRef.current = gameState.version;
     }
@@ -401,15 +405,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
                 />
                 <PlayingCard card={palaceInvalidCard} small />
               </motion.div>
-              {/* "Pick up the pile!" label */}
+              {/* "[Name] picks up the pile!" label */}
               <motion.div
                 className="text-red-300 font-black text-base px-3 py-1 rounded-full bg-black/60"
                 style={{ textShadow: '0 0 10px rgba(255,80,80,0.9)' }}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, 0] }}
-                transition={{ duration: 2.2, times: [0, 0.15, 0.7, 1] }}
+                transition={{ duration: 3.2, times: [0, 0.1, 0.75, 1] }}
               >
-                ❌ Pick up the pile!
+                ❌ {palaceInvalidPlayerName} picks up the pile!
               </motion.div>
             </div>
           </motion.div>
