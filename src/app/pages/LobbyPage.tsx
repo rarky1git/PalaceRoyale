@@ -9,11 +9,12 @@ const API = `https://${projectId}.supabase.co/functions/v1/make-server-990c827f`
 export default function LobbyPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { action, playerName, playerCount, code: joinCode } = location.state || {};
+  const { action, playerName, playerEmoji, playerCount, code: joinCode } = location.state || {};
 
   const [gameCode, setGameCode] = useState('');
   const [playerId, setPlayerId] = useState('');
   const [players, setPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [playerEmojiMap, setPlayerEmojiMap] = useState<Record<string, string>>({});
   const [expectedCount, setExpectedCount] = useState(playerCount || 2);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -44,12 +45,14 @@ export default function LobbyPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      const myEmoji = playerEmoji || '🦆';
       setGameCode(data.code);
       setPlayerId(data.playerId);
       setPlayers([{ id: data.playerId, name: playerName }]);
+      setPlayerEmojiMap({ [data.playerId]: myEmoji });
       setExpectedCount(playerCount);
       setLoading(false);
-      startPolling(data.code, data.playerId);
+      startPolling(data.code, data.playerId, myEmoji);
     } catch (e: any) {
       setError(e.message);
       setLoading(false);
@@ -64,9 +67,11 @@ export default function LobbyPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      const myEmoji = playerEmoji || '🦆';
       setGameCode(joinCode);
       setPlayerId(data.playerId);
       setPlayers(data.players);
+      setPlayerEmojiMap({ [data.playerId]: myEmoji });
       setLoading(false);
 
       // Get expected count
@@ -74,14 +79,14 @@ export default function LobbyPage() {
       const gameData = await gameRes.json();
       setExpectedCount(gameData.playerCount);
 
-      startPolling(joinCode, data.playerId);
+      startPolling(joinCode, data.playerId, myEmoji);
     } catch (e: any) {
       setError(e.message);
       setLoading(false);
     }
   };
 
-  const startPolling = (code: string, myId: string) => {
+  const startPolling = (code: string, myId: string, myEmoji: string) => {
     pollRef.current = window.setInterval(async () => {
       try {
         const res = await fetch(`${API}/games/${code}`, { headers });
@@ -93,7 +98,7 @@ export default function LobbyPage() {
         // Check if game started
         if (data.state) {
           clearInterval(pollRef.current);
-          navigate('/multiplayer', { state: { code, playerId: myId, gameState: data.state } });
+          navigate('/multiplayer', { state: { code, playerId: myId, playerEmoji: myEmoji, gameState: data.state } });
         }
       } catch { /* ignore */ }
     }, 2000);
@@ -102,7 +107,10 @@ export default function LobbyPage() {
   const startGame = async () => {
     // Host starts the game
     const playerNames = players.map(p => p.name);
-    const state = initGame(playerNames, 0);
+    // Assign emojis: use known emoji for local player, default for remote players
+    // (remote player emojis are synced individually when each player opens the game)
+    const emojis = players.map(p => playerEmojiMap[p.id] || '🦆');
+    const state = initGame(playerNames, 0, emojis);
     try {
       const res = await fetch(`${API}/games/${gameCode}`, {
         method: 'PUT', headers,
@@ -113,7 +121,7 @@ export default function LobbyPage() {
         throw new Error(data.error);
       }
       clearInterval(pollRef.current);
-      navigate('/multiplayer', { state: { code: gameCode, playerId, gameState: state } });
+      navigate('/multiplayer', { state: { code: gameCode, playerId, playerEmoji: playerEmojiMap[playerId] || '🦆', gameState: state } });
     } catch (e: any) {
       setError(e.message);
     }
@@ -167,8 +175,8 @@ export default function LobbyPage() {
         </div>
         {players.map((p, i) => (
           <div key={p.id} className="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">
-            <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-sm">
-              {p.name[0]}
+            <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-lg">
+              {playerEmojiMap[p.id] || p.name[0]}
             </div>
             <span className="font-medium">{p.name}</span>
             {i === 0 && <span className="text-[10px] bg-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded-full ml-auto">Host</span>}

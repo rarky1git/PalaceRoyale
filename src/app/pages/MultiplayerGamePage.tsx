@@ -12,7 +12,7 @@ const SAVE_KEY_PREFIX = 'palace-save-';
 export default function MultiplayerGamePage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { code, playerId, gameState: initialState } = location.state || {};
+  const { code, playerId, playerEmoji, gameState: initialState } = location.state || {};
 
   const [gameState, setGameState] = useState<GameState>(initialState);
   const [syncError, setSyncError] = useState('');
@@ -110,6 +110,7 @@ export default function MultiplayerGamePage() {
           gameState={gameState}
           myPlayerId={playerId}
           onStateChange={handleStateChange}
+          playerEmoji={playerEmoji}
           isMultiplayer
         />
       </div>

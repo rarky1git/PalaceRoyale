@@ -16,6 +16,7 @@ export interface PalaceSlot {
 export interface Player {
   id: string;
   name: string;
+  emoji?: string; // Player's chosen emoji avatar
   hand: Card[];
   palace: PalaceSlot[];
   setupPhase: 'select-facedown' | 'select-faceup' | 'done';
@@ -36,12 +37,13 @@ export interface GameState {
   winner: string | null;
   eliminated: string[]; // players who cleared all cards (safe)
   loser: string | null; // last player standing = loser
-  lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle'; cards?: Card[]; playerId?: string } | null;
+  lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle' | 'nudge'; cards?: Card[]; playerId?: string } | null;
   drawBonus?: { playerId: string } | null; // After playing from hand and drawing, can play cards matching pile top rank
   pendingCounter?: {
     type: 'drawBonus' | 'four-of-a-kind';
     bonusPlayerId: string;
   } | null; // Next player can counter a bonus by playing a valid card
+  nudgeCount?: number; // Incremented when a non-current player nudges the current player
 }
 
 // ---- Helpers ----
@@ -97,11 +99,12 @@ export function shuffle<T>(arr: T[]): T[] {
 
 // ---- Game Init ----
 
-export function initGame(playerNames: string[], dealerIndex: number = 0): GameState {
+export function initGame(playerNames: string[], dealerIndex: number = 0, playerEmojis?: string[]): GameState {
   const deck = shuffle(createDeck());
   const players: Player[] = playerNames.map((name, i) => ({
     id: `player-${i}`,
     name,
+    emoji: playerEmojis?.[i],
     hand: [],
     palace: [
       { faceDown: null, faceUp: null },
@@ -129,7 +132,27 @@ export function initGame(playerNames: string[], dealerIndex: number = 0): GameSt
     lastAction: null,
     drawBonus: null,
     pendingCounter: null,
+    nudgeCount: 0,
   };
+}
+
+// ---- Emoji / Nudge ----
+
+export function setPlayerEmoji(state: GameState, playerId: string, emoji: string): GameState {
+  const s = deepClone(state);
+  const player = s.players.find(p => p.id === playerId);
+  if (!player) return state;
+  player.emoji = emoji;
+  s.version++;
+  return s;
+}
+
+export function nudgeCurrentPlayer(state: GameState): GameState {
+  const s = deepClone(state);
+  s.nudgeCount = (s.nudgeCount ?? 0) + 1;
+  s.lastAction = { type: 'nudge' };
+  s.version++;
+  return s;
 }
 
 // ---- Setup ----
