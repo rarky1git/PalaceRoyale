@@ -313,7 +313,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const pileCards = gameState.pickupPile.slice(-6);
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-hidden relative">
+    <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
       {/* Animation overlays */}
       <AnimatePresence>
         {animEffect === 'slam' && (
@@ -455,7 +455,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-hidden">
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
