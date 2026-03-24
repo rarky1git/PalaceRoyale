@@ -2,10 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
 
+const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
+const BOT_EMOJIS = ['🤖', '👾', '🎮', '🃏'];
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [playerCount, setPlayerCount] = useState(2);
   const [playerName, setPlayerName] = useState('');
+  const [playerEmoji, setPlayerEmoji] = useState(() => {
+    try { return localStorage.getItem('palace-player-emoji') || '🦆'; } catch { return '🦆'; }
+  });
   const [mode, setMode] = useState<'menu' | 'robot-setup' | 'multi-setup'>('menu');
   const [gameCode, setGameCode] = useState('');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
@@ -25,6 +31,11 @@ export default function HomePage() {
       setSavedGames(saves);
     } catch { /* ignore */ }
   });
+
+  const selectEmoji = (emoji: string) => {
+    setPlayerEmoji(emoji);
+    try { localStorage.setItem('palace-player-emoji', emoji); } catch { /* ignore */ }
+  };
 
   const rejoinGame = async (code: string, playerId: string) => {
     try {
@@ -47,19 +58,42 @@ export default function HomePage() {
   const startRobot = () => {
     if (!playerName.trim()) return;
     const names = [playerName.trim()];
-    for (let i = 1; i < playerCount; i++) names.push(`Bot ${i}`);
-    navigate('/robot', { state: { playerNames: names, dealerIndex: 0 } });
+    const emojis = [playerEmoji];
+    for (let i = 1; i < playerCount; i++) {
+      names.push(`Bot ${i}`);
+      emojis.push(BOT_EMOJIS[(i - 1) % BOT_EMOJIS.length]);
+    }
+    navigate('/robot', { state: { playerNames: names, playerEmojis: emojis, dealerIndex: 0 } });
   };
 
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
     if (multiAction === 'create') {
-      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerCount } });
+      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount } });
     } else {
       if (!gameCode.trim()) return;
-      navigate('/lobby', { state: { action: 'join', playerName: playerName.trim(), code: gameCode.trim().toUpperCase() } });
+      navigate('/lobby', { state: { action: 'join', playerName: playerName.trim(), playerEmoji, code: gameCode.trim().toUpperCase() } });
     }
   };
+
+  const EmojiPicker = () => (
+    <div>
+      <label className="text-sm text-green-300 mb-1 block">Your emoji</label>
+      <div className="flex flex-wrap gap-1.5">
+        {PLAYER_EMOJIS.map(e => (
+          <button
+            key={e}
+            onClick={() => selectEmoji(e)}
+            className={`w-9 h-9 rounded-lg text-xl flex items-center justify-center transition-all active:scale-90 ${
+              playerEmoji === e ? 'bg-yellow-500 ring-2 ring-yellow-300' : 'bg-white/10 hover:bg-white/20'
+            }`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-center p-6 text-white">
@@ -140,6 +174,7 @@ export default function HomePage() {
             placeholder="Your name"
             className="w-full px-4 py-3 bg-white/10 rounded-xl text-white placeholder:text-green-400 outline-none focus:ring-2 ring-yellow-400"
           />
+          <EmojiPicker />
           <div>
             <label className="text-sm text-green-300 mb-1 block">Players (including you)</label>
             <div className="flex gap-2">
@@ -173,6 +208,7 @@ export default function HomePage() {
             placeholder="Your name"
             className="w-full px-4 py-3 bg-white/10 rounded-xl text-white placeholder:text-green-400 outline-none focus:ring-2 ring-yellow-400"
           />
+          <EmojiPicker />
           <div className="flex gap-2">
             <button
               onClick={() => setMultiAction('create')}
