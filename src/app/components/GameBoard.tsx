@@ -405,7 +405,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer 
               mini={miniOpponents}
               isBeforePlayer
             />
-            <div className={`shrink-0 ${miniOpponents ? 'w-4' : 'w-8'}`} />
+            <div className="shrink-0 w-px self-stretch bg-white/20 mx-1" />
           </>
         )}
         {nextOpponent && (
