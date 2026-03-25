@@ -602,6 +602,13 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
   if (playedRank === 2) {
     drawCards(s, playerId);
 
+    // If the 2 was the player's last card, they win — don't force a pick-up
+    if (handleElimination(s, playerId)) {
+      s.lastAction = { type: 'sparkle', cards, playerId };
+      s.version++;
+      return s;
+    }
+
     // Check if player has any cards to play as bonus
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
@@ -744,6 +751,14 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
 
   if (playedRank === 2) {
     drawCards(s, playerId);
+
+    // If the 2 was the player's last card, they win — don't force a pick-up
+    if (handleElimination(s, playerId)) {
+      s.lastAction = { type: 'sparkle', cards, playerId };
+      s.version++;
+      return s;
+    }
+
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
       player.palace.some(sl => sl.faceDown !== null);
@@ -889,6 +904,14 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
   // Check 2 bonus
   if (playedRank === 2) {
     drawCards(s, playerId);
+
+    // If the 2 was the player's last card, they win — don't force a pick-up
+    if (handleElimination(s, playerId)) {
+      s.lastAction = { type: 'sparkle', cards, playerId };
+      s.version++;
+      return s;
+    }
+
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
       player.palace.some(sl => sl.faceDown !== null);
@@ -906,8 +929,6 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     s.version++;
     return s;
   }
-
-  // Normal - ensure player still has minimum of 3 cards, then check elimination and advance turn
   drawCards(s, playerId);
   if (handleElimination(s, playerId)) {
     s.lastAction = { type: 'play', cards, playerId };
@@ -1093,6 +1114,14 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
 
   if (playedRank === 2) {
     drawCards(s, playerId);
+
+    // If the 2 was the player's last card, they win — don't force a pick-up
+    if (handleElimination(s, playerId)) {
+      s.lastAction = { type: 'sparkle', cards, playerId };
+      s.version++;
+      return s;
+    }
+
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
       player.palace.some(sl => sl.faceDown !== null);
