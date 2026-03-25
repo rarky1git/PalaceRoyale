@@ -1022,8 +1022,10 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
       player.hand = [...player.hand, ...s.pickupPile];
       s.pickupPile = [];
       s.pendingCounter = null;
+      s.drawBonus = null;
       s.log.push(`${cardDisplay(card)} can't be played! ${player.name} picks up the pile.`);
       advanceTurn(s);
+      s.lastAction = { type: 'palace-invalid', cards: [card], playerId };
       s.version++;
       return s;
     }
