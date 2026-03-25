@@ -395,7 +395,7 @@ export default function HomePage() {
         </div>
       )}
       <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
-        v0.5
+        v0.5.1
       </footer>
     </div>
   );
