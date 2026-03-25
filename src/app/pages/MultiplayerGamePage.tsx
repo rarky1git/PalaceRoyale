@@ -188,25 +188,25 @@ export default function MultiplayerGamePage() {
         const data = await res.json();
         if (!res.ok) return;
 
-        if (data.state && data.state.version > versionRef.current) {
+        if (data.state && pendingSetupStateRef.current) {
           // If there's still a pending setup push (previous attempts failed), retry
           // using the latest server state before accepting it
-          if (pendingSetupStateRef.current) {
-            const merged = mergeSetupWithServer(data.state, pendingSetupStateRef.current, playerId);
-            try {
-              const pushRes = await fetch(`${API}/games/${code}`, {
-                method: 'PUT', headers,
-                body: JSON.stringify({ state: merged, playerId }),
-              });
-              if (pushRes.ok) {
-                pendingSetupStateRef.current = null;
-                versionRef.current = merged.version;
-                setGameState(merged);
-              }
-            } catch (e) { console.log(`Pending setup retry error (game=${code}, player=${playerId}):`, e); }
-            return;
-          }
+          const merged = mergeSetupWithServer(data.state, pendingSetupStateRef.current, playerId);
+          try {
+            const pushRes = await fetch(`${API}/games/${code}`, {
+              method: 'PUT', headers,
+              body: JSON.stringify({ state: merged, playerId }),
+            });
+            if (pushRes.ok) {
+              pendingSetupStateRef.current = null;
+              versionRef.current = merged.version;
+              setGameState(merged);
+              return;
+            }
+          } catch (e) { console.log(`Pending setup retry error (game=${code}, player=${playerId}):`, e); }
+        }
 
+        if (data.state && data.state.version > versionRef.current) {
           versionRef.current = data.state.version;
           setGameState(data.state);
         }
