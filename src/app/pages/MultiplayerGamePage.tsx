@@ -149,7 +149,7 @@ export default function MultiplayerGamePage() {
 
     // Poll for state updates
     pollRef.current = window.setInterval(async () => {
-      // During local setup, poll in the background and save the latest server state
+      // During local setup (before player finishes), poll and save server state without overwriting UI
       if (!setupDoneRef.current) {
         try {
           const res = await fetch(`${API}/games/${code}`, { headers });
@@ -182,11 +182,31 @@ export default function MultiplayerGamePage() {
         return;
       }
 
+      // After local setup is done — poll for updates from other players
       try {
         const res = await fetch(`${API}/games/${code}`, { headers });
         const data = await res.json();
         if (!res.ok) return;
+
         if (data.state && data.state.version > versionRef.current) {
+          // If there's still a pending setup push (previous attempts failed), retry
+          // using the latest server state before accepting it
+          if (pendingSetupStateRef.current) {
+            const merged = mergeSetupWithServer(data.state, pendingSetupStateRef.current, playerId);
+            try {
+              const pushRes = await fetch(`${API}/games/${code}`, {
+                method: 'PUT', headers,
+                body: JSON.stringify({ state: merged, playerId }),
+              });
+              if (pushRes.ok) {
+                pendingSetupStateRef.current = null;
+                versionRef.current = merged.version;
+                setGameState(merged);
+              }
+            } catch (e) { console.log(`Pending setup retry error (game=${code}, player=${playerId}):`, e); }
+            return;
+          }
+
           versionRef.current = data.state.version;
           setGameState(data.state);
         }
