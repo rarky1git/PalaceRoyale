@@ -14,6 +14,7 @@ interface PalaceDisplayProps {
   playerName?: string;
   centered?: boolean;
   showRotation?: boolean;
+  playableCardIds?: string[];
 }
 
 // Deterministic rotation per slot index
@@ -35,6 +36,7 @@ export function PalaceDisplay({
   playerName,
   centered,
   showRotation,
+  playableCardIds,
 }: PalaceDisplayProps) {
   // True when every slot has lost its face-up card
   const allFaceUpGone = palace.every(slot => !slot.faceUp);
@@ -50,6 +52,7 @@ export function PalaceDisplay({
         {palace.map((slot, i) => {
           const faceUpRot = showRotation ? getSlotRotation(i, 'up') : 0;
           const faceDownRot = showRotation ? getSlotRotation(i, 'down') : 0;
+          const isFaceUpPlayable = !slot.faceUp || !playableCardIds || playableCardIds.includes(slot.faceUp.id);
           return (
             <div key={i} className="flex flex-col-reverse items-center">
               {/* Face up card — hidden (no placeholder) once all face-ups are gone */}
@@ -61,8 +64,9 @@ export function PalaceDisplay({
                       small={small}
                       mini={mini}
                       selected={selectedCards.includes(slot.faceUp.id)}
-                      onClick={isCurrentPlayer && canPlayFaceUp ? () => onCardClick?.(slot.faceUp!) : undefined}
-                      highlight={isCurrentPlayer && canPlayFaceUp}
+                      onClick={isCurrentPlayer && canPlayFaceUp && isFaceUpPlayable ? () => onCardClick?.(slot.faceUp!) : undefined}
+                      highlight={isCurrentPlayer && canPlayFaceUp && isFaceUpPlayable}
+                      disabled={canPlayFaceUp && !isFaceUpPlayable}
                     />
                   ) : (
                     <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200/20`} />
