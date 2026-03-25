@@ -53,6 +53,7 @@ export interface GameState {
     bonusPlayerId: string;
   } | null; // Next player can counter a draw bonus by playing a valid card
   nudgeCount?: number; // Incremented when a non-current player nudges the current player
+  newGameRequested?: string[]; // Player IDs that have requested a new game (multiplayer)
 }
 
 // ---- Helpers ----
@@ -816,17 +817,6 @@ export function pickupPile(state: GameState, playerId: string): GameState {
 
   if (pIdx !== s.currentPlayerIndex) throw new Error('Not your turn');
 
-  // Skip steal check during counter scenarios (player is forced to pick up)
-  if (!s.pendingCounter) {
-    // Check if anyone can steal first
-    for (const otherPlayer of s.players) {
-      if (otherPlayer.id === playerId) continue;
-      if (canStealTurn(s, otherPlayer.id)) {
-        throw new Error(`Turn must be stolen by ${otherPlayer.name} (four of a kind available)`);
-      }
-    }
-  }
-
   player.hand = [...player.hand, ...s.pickupPile];
   s.log.push(`${player.name} picks up the pile (${s.pickupPile.length} cards).`);
   s.pickupPile = [];
@@ -1299,20 +1289,10 @@ export function aiPlayTurn(state: GameState): GameState {
   const playable = getPlayableCards(s, player.id);
 
   if (playable.length === 0) {
-    // Try to pick up, but check steal
     try {
       s = pickupPile(s, player.id);
     } catch {
-      // Someone can steal - but in robot mode we handle this differently
-      // For now, force pickup
-      const forcedState = deepClone(s);
-      const fp = forcedState.players[forcedState.currentPlayerIndex];
-      fp.hand = [...fp.hand, ...forcedState.pickupPile];
-      forcedState.pickupPile = [];
-      forcedState.log.push(`${fp.name} picks up the pile.`);
-      advanceTurn(forcedState);
-      forcedState.version++;
-      return forcedState;
+      return s;
     }
     return s;
   }
@@ -1441,6 +1421,44 @@ export function revealFaceDownCards(state: GameState, playerId: string): GameSta
       slot.faceUp = slot.faceDown;
       slot.faceDown = null;
     }
+  }
+  s.version++;
+  return s;
+}
+
+// Reset game for rematch — same players, new deal. Loser deals.
+export function resetGame(state: GameState, numberOfDecks: number = 1): GameState {
+  const playerNames = state.players.map(p => p.name);
+  const playerEmojis = state.players.map(p => p.emoji || '🦆');
+  const playerStats = state.players.map(p => p.stats);
+
+  // Loser deals next game
+  const loserIndex = state.loser ? state.players.findIndex(p => p.id === state.loser) : 0;
+  const dealerIndex = loserIndex >= 0 ? loserIndex : 0;
+
+  const newState = initGame(playerNames, dealerIndex, numberOfDecks, playerEmojis);
+
+  // Carry version forward so server accepts the update
+  newState.version = state.version + 1;
+
+  // Carry stats forward
+  for (let i = 0; i < newState.players.length; i++) {
+    if (playerStats[i]) {
+      newState.players[i].stats = playerStats[i];
+    }
+  }
+
+  return newState;
+}
+
+// Request a new game (opponent → host)
+export function requestNewGame(state: GameState, playerId: string): GameState {
+  const s = deepClone(state);
+  if (!s.newGameRequested) s.newGameRequested = [];
+  if (!s.newGameRequested.includes(playerId)) {
+    s.newGameRequested.push(playerId);
+    const player = s.players.find(p => p.id === playerId);
+    if (player) s.log.push(`${player.name} wants to play again!`);
   }
   s.version++;
   return s;

@@ -19,6 +19,8 @@ export default function MultiplayerGamePage() {
   const [showHelp, setShowHelp] = useState(false);
   const pollRef = useRef<number>();
   const versionRef = useRef(initialState?.version || 0);
+  // Track whether local player has finished setup (face-down + face-up selected)
+  const setupDoneRef = useRef(false);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -34,6 +36,24 @@ export default function MultiplayerGamePage() {
     }
   }, [code, playerId]);
 
+  // Check if local player has finished setup
+  const isLocalSetupDone = (() => {
+    if (!gameState || gameState.phase !== 'setup') return true; // Not in setup = done
+    const me = gameState.players.find(p => p.id === playerId);
+    return me?.setupPhase === 'done';
+  })();
+
+  // Mark setup as done once both phases complete, or reset when a new game starts
+  useEffect(() => {
+    if (isLocalSetupDone && !setupDoneRef.current) {
+      setupDoneRef.current = true;
+    }
+    // Reset when game returns to setup (e.g., rematch via resetGame)
+    if (!isLocalSetupDone && setupDoneRef.current) {
+      setupDoneRef.current = false;
+    }
+  }, [isLocalSetupDone]);
+
   useEffect(() => {
     if (!code || !playerId || !initialState) {
       navigate('/');
@@ -42,16 +62,16 @@ export default function MultiplayerGamePage() {
 
     // Poll for state updates
     pollRef.current = window.setInterval(async () => {
+      // During local setup, don't pull from server to avoid overwriting selections
+      if (!setupDoneRef.current) return;
+
       try {
         const res = await fetch(`${API}/games/${code}`, { headers });
         const data = await res.json();
         if (!res.ok) return;
         if (data.state && data.state.version > versionRef.current) {
           versionRef.current = data.state.version;
-          setGameState(prev => {
-            // Preserve state but update from server
-            return data.state;
-          });
+          setGameState(data.state);
         }
       } catch { /* ignore */ }
     }, 2000);
@@ -62,6 +82,15 @@ export default function MultiplayerGamePage() {
   const handleStateChange = async (newState: GameState) => {
     setGameState(newState);
     versionRef.current = newState.version;
+
+    // During local setup (before both phases done), buffer locally — don't push to server
+    if (!setupDoneRef.current) {
+      // Check if this change just completed setup
+      const me = newState.players.find(p => p.id === playerId);
+      if (me?.setupPhase !== 'done') return; // Still setting up, defer sync
+      // Setup just completed — fall through to push the final state
+      setupDoneRef.current = true;
+    }
 
     try {
       const res = await fetch(`${API}/games/${code}`, {
