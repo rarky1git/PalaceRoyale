@@ -43,10 +43,14 @@ export default function MultiplayerGamePage() {
     return me?.setupPhase === 'done';
   })();
 
-  // Mark setup as done once both phases complete — never reverts
+  // Mark setup as done once both phases complete, or reset when a new game starts
   useEffect(() => {
     if (isLocalSetupDone && !setupDoneRef.current) {
       setupDoneRef.current = true;
+    }
+    // Reset when game returns to setup (e.g., rematch via resetGame)
+    if (!isLocalSetupDone && setupDoneRef.current) {
+      setupDoneRef.current = false;
     }
   }, [isLocalSetupDone]);
 

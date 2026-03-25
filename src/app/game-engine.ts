@@ -1311,7 +1311,11 @@ export function aiPlayTurn(state: GameState): GameState {
   const playable = getPlayableCards(s, player.id);
 
   if (playable.length === 0) {
-    s = pickupPile(s, player.id);
+    try {
+      s = pickupPile(s, player.id);
+    } catch {
+      return s;
+    }
     return s;
   }
 
@@ -1455,6 +1459,9 @@ export function resetGame(state: GameState, numberOfDecks: number = 1): GameStat
   const dealerIndex = loserIndex >= 0 ? loserIndex : 0;
 
   const newState = initGame(playerNames, dealerIndex, numberOfDecks, playerEmojis);
+
+  // Carry version forward so server accepts the update
+  newState.version = state.version + 1;
 
   // Carry stats forward
   for (let i = 0; i < newState.players.length; i++) {

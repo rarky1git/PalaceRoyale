@@ -258,6 +258,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFinished, gameState.loser]);
 
+  // Reset one-shot refs when a new game starts (rematch)
+  useEffect(() => {
+    if (isSetup) {
+      ranksSavedRef.current = false;
+      statsInjectedRef.current = false;
+      setLeaderboardPhase('game');
+    }
+  }, [isSetup]);
+
   const playQuack = () => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -1079,7 +1088,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
       </span>
       {isSetup ? (
         <span className="text-[10px] text-green-300">
-          {deferredSetup ? '...' : player.setupPhase === 'done' ? '✅ Ready' : '⏳ Setting up'}
+          {deferredSetup ? '...' : (player.setupPhase === 'done' ? '✅ Ready' : '⏳ Setting up')}
         </span>
       ) : (
         <>
@@ -1196,11 +1205,17 @@ function GameEndLeaderboard({ gameState, myPlayerId, phase, onNext, onHome }: {
           ))}
         </div>
       )}
-      {(gameState.newGameRequested || []).length > 0 && (
-        <div className="text-[10px] text-blue-300">
-          🔄 {gameState.newGameRequested!.map(pid => gameState.players.find(p => p.id === pid)?.name).filter(Boolean).join(', ')} {gameState.newGameRequested!.length === 1 ? 'wants' : 'want'} to play again
-        </div>
-      )}
+      {(gameState.newGameRequested || []).length > 0 && (() => {
+        const requesters = gameState.newGameRequested!
+          .map(pid => gameState.players.find(p => p.id === pid)?.name)
+          .filter(Boolean);
+        const verb = requesters.length === 1 ? 'wants' : 'want';
+        return (
+          <div className="text-[10px] text-blue-300">
+            🔄 {requesters.join(', ')} {verb} to play again
+          </div>
+        );
+      })()}
       <button
         onClick={onHome}
         className="w-full py-2 bg-green-700 text-white rounded-xl font-bold text-sm hover:bg-green-600 active:scale-95 transition-all"
