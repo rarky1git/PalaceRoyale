@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
-import { MAX_DECKS, MAX_PLAYERS_PER_DECK } from '../game-engine';
+import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats } from '../game-engine';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
 const BOT_EMOJIS = ['🤖', '👾', '🎮', '🃏'];
+const STATS_KEY = 'palace-stats';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [gameCode, setGameCode] = useState('');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
   const [savedGames, setSavedGames] = useState<{ code: string; playerId: string }[]>([]);
+  const [myStats, setMyStats] = useState<PlayerStats | null>(null);
 
   // Auto-focus the custom emoji input when it becomes visible
   useEffect(() => {
@@ -27,6 +29,17 @@ export default function HomePage() {
       customEmojiInputRef.current.focus();
     }
   }, [showCustomEmojiInput]);
+
+  // Load stats and saved games on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as PlayerStats;
+        if (parsed.gamesPlayed > 0) setMyStats(parsed);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // Check for saved games on mount
   useState(() => {
@@ -169,6 +182,17 @@ export default function HomePage() {
 
       {mode === 'menu' && (
         <div className="flex flex-col gap-3 w-full max-w-xs">
+          {myStats && (
+            <div className="flex items-center justify-between px-4 py-3 bg-yellow-500/10 border border-yellow-400/30 rounded-xl mb-1">
+              <span className="text-xs text-yellow-300 font-semibold">🏆 Rankings</span>
+              <div className="flex items-center gap-3 text-sm">
+                <span>🥇 {myStats.gold}</span>
+                <span>🥈 {myStats.silver}</span>
+                <span>🥉 {myStats.bronze}</span>
+                {myStats.losses > 0 && <span className="text-red-400">💀 {myStats.losses}</span>}
+              </div>
+            </div>
+          )}
           {savedGames.length > 0 && (
             <div className="space-y-2 mb-2">
               <span className="text-xs text-green-400">Rejoin Game:</span>

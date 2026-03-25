@@ -12,6 +12,7 @@ interface PalaceDisplayProps {
   small?: boolean;
   mini?: boolean;
   playerName?: string;
+  statsText?: string; // Short stats string shown next to player name (e.g. "🥇2 🥈1")
   centered?: boolean;
   showRotation?: boolean;
   playableCardIds?: string[];
@@ -34,6 +35,7 @@ export function PalaceDisplay({
   small,
   mini,
   playerName,
+  statsText,
   centered,
   showRotation,
   playableCardIds,
@@ -44,9 +46,16 @@ export function PalaceDisplay({
   return (
     <div className={`flex flex-col gap-3.5 ${centered ? 'items-center' : 'items-left'}`}>
       {playerName && (
-        <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} font-bold text-gray-200 truncate max-w-32`}>
-          {playerName}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} font-bold text-gray-200 truncate max-w-32`}>
+            {playerName}
+          </span>
+          {statsText && (
+            <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} text-yellow-300 shrink-0`}>
+              {statsText}
+            </span>
+          )}
+        </div>
       )}
       <div className={`flex ${mini ? 'gap-3' : 'gap-3'}`}>
         {palace.map((slot, i) => {

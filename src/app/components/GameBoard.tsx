@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  GameState, Card, Player,
+  GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
   canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
   playCards, playBonusAction, pickupPile, stealTurn,
@@ -11,6 +11,7 @@ import {
   aiSetup, aiPlayTurn, checkAISteal,
   deepClone,
   setPlayerEmoji, nudgeCurrentPlayer,
+  setPlayerStats, computeGameRankings,
 } from '../game-engine';
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
@@ -19,6 +20,34 @@ import { useSettings } from '../contexts/SettingsContext';
 
 // Seeded random per card ID for consistent rotations
 const DEFAULT_EMOJI = '🦆';
+const STATS_KEY = 'palace-stats';
+
+function loadLocalStats(): PlayerStats {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) return { gold: 0, silver: 0, bronze: 0, losses: 0, gamesPlayed: 0 };
+    return JSON.parse(raw) as PlayerStats;
+  } catch {
+    return { gold: 0, silver: 0, bronze: 0, losses: 0, gamesPlayed: 0 };
+  }
+}
+
+function saveLocalStats(stats: PlayerStats): void {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch { /* ignore */ }
+}
+
+// Returns a compact medal string like "🥇2 🥈1" or undefined if no medals
+function formatStatsText(stats: PlayerStats | undefined): string | undefined {
+  if (!stats) return undefined;
+  const parts = [
+    stats.gold > 0 ? `🥇${stats.gold}` : '',
+    stats.silver > 0 ? `🥈${stats.silver}` : '',
+    stats.bronze > 0 ? `🥉${stats.bronze}` : '',
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : undefined;
+}
 
 function seededRandom(seed: string): number {
   let hash = 0;
@@ -183,6 +212,39 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     }, 800);
     return () => clearTimeout(timer);
   }, [gameState.version, isSetup, isMultiplayer]);
+
+  // Inject local player's stats into game state so opponents can see them (once on start)
+  const statsInjectedRef = useRef(false);
+  useEffect(() => {
+    if (statsInjectedRef.current || !me) return;
+    if (me.stats) { statsInjectedRef.current = true; return; } // already set
+    const localStats = loadLocalStats();
+    statsInjectedRef.current = true;
+    onStateChange(setPlayerStats(gameState, myPlayerId, localStats));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.version]);
+
+  // Save updated rankings to localStorage when game ends
+  const ranksSavedRef = useRef(false);
+  useEffect(() => {
+    if (!isFinished || ranksSavedRef.current || !gameState.loser) return;
+    ranksSavedRef.current = true;
+    const ranked = computeGameRankings(gameState);
+    const myRankIndex = ranked.indexOf(myPlayerId);
+    if (myRankIndex === -1) return;
+    const myRank = myRankIndex + 1; // 1-based
+    const totalPlayers = gameState.players.length;
+    const prevStats = loadLocalStats();
+    const newStats: PlayerStats = { ...prevStats, gamesPlayed: prevStats.gamesPlayed + 1 };
+    if (myRank === 1) newStats.gold++;
+    else if (myRank === 2) newStats.silver++;
+    else if (myRank === 3 && totalPlayers >= 4) newStats.bronze++;
+    else if (myRank === totalPlayers) newStats.losses++;
+    saveLocalStats(newStats);
+    // Push updated stats back into game state so opponents see updated counts
+    onStateChange(setPlayerStats(gameState, myPlayerId, newStats));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinished, gameState.loser]);
 
   const playQuack = () => {
     try {
@@ -730,6 +792,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               onCardClick={(card) => toggleCard(card.id)}
               onFaceDownClick={handleFaceDownPlay}
               playerName={(isMyTurn || hasDrawBonus) && isPlaying ? `⭐ ${me.name}'s Palace` : `${me.name}'s Palace`}
+              statsText={formatStatsText(me.stats)}
               centered={palaceIsActive}
               showRotation
               playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
@@ -916,7 +979,14 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
         <>
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
           <span className="text-[10px] text-green-300">
-            {isEliminated ? 'Safe!' : `Hand: ${player.hand.length}`}
+            {isEliminated ? 'Safe!' : (
+              <>
+                {formatStatsText(player.stats) && (
+                  <span className="text-yellow-300 mr-1">{formatStatsText(player.stats)}</span>
+                )}
+                {`Hand: ${player.hand.length}`}
+              </>
+            )}
           </span>
         </>
       )}

@@ -13,6 +13,14 @@ export interface PalaceSlot {
   faceUp: Card | null;
 }
 
+export interface PlayerStats {
+  gold: number;       // 1st place finishes
+  silver: number;     // 2nd place finishes
+  bronze: number;     // 3rd place finishes
+  losses: number;     // last place finishes
+  gamesPlayed: number;
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -21,6 +29,7 @@ export interface Player {
   palace: PalaceSlot[];
   setupPhase: 'select-facedown' | 'select-faceup' | 'done';
   setupCards: Card[]; // 9 cards dealt during setup
+  stats?: PlayerStats; // Cumulative rankings for this player (persisted via device)
 }
 
 export interface GameState {
@@ -153,6 +162,23 @@ export function setPlayerEmoji(state: GameState, playerId: string, emoji: string
   player.emoji = emoji;
   s.version++;
   return s;
+}
+
+export function setPlayerStats(state: GameState, playerId: string, stats: PlayerStats): GameState {
+  const s = deepClone(state);
+  const player = s.players.find(p => p.id === playerId);
+  if (!player) return state;
+  player.stats = stats;
+  s.version++;
+  return s;
+}
+
+// Returns player IDs ordered by finish position (index 0 = 1st to finish/gold, last index = loser).
+// state.eliminated is populated in finish order by handleElimination, so this preserves that order.
+export function computeGameRankings(state: GameState): string[] {
+  const ranked = [...(state.eliminated || [])];
+  if (state.loser) ranked.push(state.loser);
+  return ranked;
 }
 
 export function nudgeCurrentPlayer(state: GameState): GameState {
