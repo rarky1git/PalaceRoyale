@@ -18,6 +18,8 @@ import { HowToPlayModal } from './HowToPlayModal';
 import { useSettings } from '../contexts/SettingsContext';
 
 // Seeded random per card ID for consistent rotations
+const DEFAULT_EMOJI = '🦆';
+
 function seededRandom(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -46,6 +48,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | null>(null);
+  const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const logRef = useRef<HTMLDivElement>(null);
@@ -79,14 +82,20 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       const action = gameState.lastAction;
       if (settings.particleEffects) {
         if (action?.type === 'slam') {
+          const emoji = gameState.players.find(p => p.id === action.playerId)?.emoji || DEFAULT_EMOJI;
+          setAnimEmoji(emoji);
           setAnimEffect('wipeout');
-          setTimeout(() => setAnimEffect(null), 3500);
+          setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3500);
         } else if (action?.type === 'sparkle') {
+          const emoji = gameState.players.find(p => p.id === action.playerId)?.emoji || DEFAULT_EMOJI;
+          setAnimEmoji(emoji);
           setAnimEffect('sparkle');
-          setTimeout(() => setAnimEffect(null), 1500);
+          setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 1500);
         } else if (action?.type === 'wipeout') {
+          const emoji = gameState.players.find(p => p.id === action.playerId)?.emoji || DEFAULT_EMOJI;
+          setAnimEmoji(emoji);
           setAnimEffect('wipeout');
-          setTimeout(() => setAnimEffect(null), 4500);
+          setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 4500);
         }
       }
       if (action?.type === 'palace-invalid' && action.cards?.[0]) {
@@ -123,7 +132,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   // me.emoji in deps allows retry if a multiplayer conflict reset the emoji.
   useEffect(() => {
     if (!isPlaying || !me) return;
-    const emoji = playerEmoji || '🦆';
+    const emoji = playerEmoji || DEFAULT_EMOJI;
     if (me.emoji !== emoji) {
       onStateChange(setPlayerEmoji(gameState, myPlayerId, emoji));
     }
@@ -350,7 +359,39 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
-      {/* Animation overlays */}
+      {/* Emoji waterfall — background layer, behind all game components */}
+      <AnimatePresence>
+        {(animEffect === 'wipeout' || animEffect === 'slam' || animEffect === 'sparkle') && animEmoji && (
+          <motion.div
+            key="emoji-waterfall"
+            className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {[...Array(18)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-2xl select-none"
+                style={{ left: `${(i * 5.5 + 2) % 100}%` }}
+                initial={{ y: -48, opacity: 0.85 }}
+                animate={{ y: '110vh', opacity: [0.85, 0.85, 0] }}
+                transition={{
+                  duration: 2.2 + (i % 5) * 0.4,
+                  delay: i * 0.12,
+                  ease: 'linear',
+                  opacity: { times: [0, 0.7, 1], duration: 2.2 + (i % 5) * 0.4 },
+                }}
+              >
+                {animEmoji}
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Animation overlays — on top of all game components */}
       <AnimatePresence>
         {animEffect === 'slam' && (
           <motion.div
@@ -471,7 +512,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
       {/* Opponents area */}
       <div
-        className={`flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none`}
+        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {prevOpponent && (
@@ -517,7 +558,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-visible">
+      <div className="relative z-[1] flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-visible">
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
@@ -674,7 +715,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* My area - highlighted when my turn or draw bonus available */}
-      <div className={`shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
+      <div className={`relative z-[1] shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
         (isMyTurn || hasDrawBonus) && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
       }`}>
         {/* My Palace - centered during setup/active, hidden when empty during play */}
@@ -691,6 +732,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               playerName={(isMyTurn || hasDrawBonus) && isPlaying ? `⭐ ${me.name}'s Palace` : `${me.name}'s Palace`}
               centered={palaceIsActive}
               showRotation
+              playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
             />
           </div>
         )}
@@ -810,7 +852,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 className="px-3 py-1.5 bg-white/10 text-xl rounded-lg hover:bg-white/20 active:scale-90 transition-all"
                 title={`Nudge ${currentPlayer.name}`}
               >
-                {currentPlayer.emoji || '🦆'}
+                {currentPlayer.emoji || DEFAULT_EMOJI}
               </button>
             )}
           </div>
@@ -864,7 +906,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
       'bg-black/10'
     }`}>
       <span className="text-[10px] font-bold truncate max-w-26">
-        {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
+        {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
       {isSetup ? (
         <span className="text-[10px] text-green-300">

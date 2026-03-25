@@ -44,8 +44,13 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
           ${disabled ? 'opacity-50' : ''}
           transition-all shrink-0`}
       >
-        <span className={`${textSize} font-bold leading-none ${isRed ? 'text-red-600' : 'text-gray-900'}`}>
-          {getRankDisplay(card.rank)}{getSuitSymbol(card.suit)}
+        <span className="flex flex-col items-center">
+          <span className={`text-[10px] font-bold leading-none ${isRed ? 'text-red-600' : 'text-gray-900'}`}>
+            {getRankDisplay(card.rank)}
+          </span>
+          <span className={`text-[9px] leading-none ${isRed ? 'text-red-600' : 'text-gray-900'}`}>
+            {getSuitSymbol(card.suit)}
+          </span>
         </span>
       </button>
     );
