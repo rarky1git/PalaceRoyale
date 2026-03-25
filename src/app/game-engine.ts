@@ -594,7 +594,8 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
 
     // Check win before bonus
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -613,7 +614,8 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
     s.log.push('10 played! Pile is wiped out!');
 
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -742,7 +744,8 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
     s.pickupPile = [];
     s.log.push('Four of a kind! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -758,7 +761,8 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
     s.pickupPile = [];
     s.log.push('10 played! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -874,7 +878,8 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     s.pickupPile = [];
     s.log.push('Four of a kind! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -891,7 +896,8 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     s.pickupPile = [];
     s.log.push('10 played! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -989,7 +995,8 @@ export function stealTurn(state: GameState, stealingPlayerId: string, cardIds: s
   s.currentPlayerIndex = s.players.findIndex(p => p.id === stealingPlayerId);
   drawCards(s, stealingPlayerId);
 
-  if (handleElimination(s, stealingPlayerId)) {
+  if (handleElimination(s, stealingPlayerId) || s.eliminated.includes(stealingPlayerId)) {
+    if (s.phase !== 'finished') advanceTurn(s);
     s.lastAction = { type: 'wipeout', cards: cardIds.map(id => ({ id, suit: 'spades' as Suit, rank: 0 })), playerId: stealingPlayerId };
     s.version++;
     return s;
@@ -1080,7 +1087,8 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
     s.pickupPile = [];
     s.log.push('Four of a kind! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -1096,7 +1104,8 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
     s.pickupPile = [];
     s.log.push('10 played! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
