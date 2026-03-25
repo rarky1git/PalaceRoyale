@@ -6,8 +6,8 @@ import { Copy, Check, Users, Loader2 } from 'lucide-react';
 
 const API = `https://${projectId}.supabase.co/functions/v1/make-server-990c827f`;
 
-// Default emoji palette assigned by player join order
-const DEFAULT_PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯', '🐹', '🦜', '🐙'];
+// Default emoji palette used as fallback when a player's emoji is missing
+const DEFAULT_EMOJI_FALLBACK = '🦆';
 
 export default function LobbyPage() {
   const location = useLocation();
@@ -16,7 +16,7 @@ export default function LobbyPage() {
 
   const [gameCode, setGameCode] = useState('');
   const [playerId, setPlayerId] = useState('');
-  const [players, setPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [players, setPlayers] = useState<{ id: string; name: string; emoji?: string }[]>([]);
   const [playerEmojiMap, setPlayerEmojiMap] = useState<Record<string, string>>({});
   const [expectedCount, setExpectedCount] = useState(playerCount || 2);
   const [error, setError] = useState('');
@@ -44,14 +44,14 @@ export default function LobbyPage() {
     try {
       const res = await fetch(`${API}/games`, {
         method: 'POST', headers,
-        body: JSON.stringify({ playerName, playerCount }),
+        body: JSON.stringify({ playerName, playerEmoji: playerEmoji || DEFAULT_EMOJI_FALLBACK, playerCount }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const myEmoji = playerEmoji || '🦆';
+      const myEmoji = playerEmoji || DEFAULT_EMOJI_FALLBACK;
       setGameCode(data.code);
       setPlayerId(data.playerId);
-      setPlayers([{ id: data.playerId, name: playerName }]);
+      setPlayers([{ id: data.playerId, name: playerName, emoji: myEmoji }]);
       setPlayerEmojiMap({ [data.playerId]: myEmoji });
       setExpectedCount(playerCount);
       setLoading(false);
@@ -66,15 +66,20 @@ export default function LobbyPage() {
     try {
       const res = await fetch(`${API}/games/${joinCode}/join`, {
         method: 'POST', headers,
-        body: JSON.stringify({ playerName }),
+        body: JSON.stringify({ playerName, playerEmoji: playerEmoji || DEFAULT_EMOJI_FALLBACK }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const myEmoji = playerEmoji || '🦆';
+      const myEmoji = playerEmoji || DEFAULT_EMOJI_FALLBACK;
       setGameCode(joinCode);
       setPlayerId(data.playerId);
       setPlayers(data.players);
-      setPlayerEmojiMap({ [data.playerId]: myEmoji });
+      // Build emoji map from server player records
+      const emojiMap: Record<string, string> = {};
+      (data.players as { id: string; name: string; emoji?: string }[]).forEach(p => {
+        emojiMap[p.id] = p.emoji || DEFAULT_EMOJI_FALLBACK;
+      });
+      setPlayerEmojiMap(emojiMap);
       setLoading(false);
 
       // Get expected count
@@ -97,12 +102,12 @@ export default function LobbyPage() {
         if (!res.ok) return;
         setPlayers(data.players);
         setExpectedCount(data.playerCount);
-        // Assign default emojis to any new players (by their position in the list)
+        // Read each player's emoji from the server player record
         setPlayerEmojiMap(prev => {
           const updated = { ...prev };
-          (data.players as { id: string; name: string }[]).forEach((p, i) => {
+          (data.players as { id: string; name: string; emoji?: string }[]).forEach(p => {
             if (!updated[p.id]) {
-              updated[p.id] = p.id === myId ? myEmoji : DEFAULT_PLAYER_EMOJIS[i % DEFAULT_PLAYER_EMOJIS.length];
+              updated[p.id] = p.emoji || DEFAULT_EMOJI_FALLBACK;
             }
           });
           return updated;
@@ -120,9 +125,8 @@ export default function LobbyPage() {
   const startGame = async () => {
     // Host starts the game
     const playerNames = players.map(p => p.name);
-    // Assign emojis: use known emoji for local player, default for remote players
-    // (remote player emojis are synced individually when each player opens the game)
-    const emojis = players.map(p => playerEmojiMap[p.id] || '🦆');
+    // Read emojis from server player records
+    const emojis = players.map(p => p.emoji || playerEmojiMap[p.id] || DEFAULT_EMOJI_FALLBACK);
     const state = initGame(playerNames, 0, deckCount ?? 1, emojis);
     try {
       const res = await fetch(`${API}/games/${gameCode}`, {
@@ -134,7 +138,7 @@ export default function LobbyPage() {
         throw new Error(data.error);
       }
       clearInterval(pollRef.current);
-      navigate('/multiplayer', { state: { code: gameCode, playerId, playerEmoji: playerEmojiMap[playerId] || '🦆', gameState: state } });
+      navigate('/multiplayer', { state: { code: gameCode, playerId, playerEmoji: players.find(p => p.id === playerId)?.emoji || playerEmojiMap[playerId] || DEFAULT_EMOJI_FALLBACK, gameState: state } });
     } catch (e: any) {
       setError(e.message);
     }
