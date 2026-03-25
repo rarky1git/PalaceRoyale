@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
@@ -12,6 +13,7 @@ import {
   deepClone,
   setPlayerEmoji, nudgeCurrentPlayer,
   setPlayerStats, computeGameRankings,
+  revealFaceDownCards,
 } from '../game-engine';
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
@@ -72,11 +74,12 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji }: GameBoardProps) {
+  const navigate = useNavigate();
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
-  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | null>(null);
+  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'pickup' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
@@ -85,6 +88,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
+  const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
   const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
@@ -125,6 +129,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setAnimEmoji(emoji);
           setAnimEffect('wipeout');
           setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 4500);
+        } else if (action?.type === 'pickup') {
+          const emoji = gameState.players.find(p => p.id === action.playerId)?.emoji || DEFAULT_EMOJI;
+          setAnimEmoji(emoji);
+          setAnimEffect('pickup');
+          setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3000);
         }
       }
       if (action?.type === 'palace-invalid' && action.cards?.[0]) {
@@ -547,6 +556,57 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             </motion.div>
           </motion.div>
         )}
+        {animEffect === 'pickup' && animEmoji && (
+          <motion.div
+            key="pickup"
+            className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="text-3xl font-black text-blue-400 z-10"
+              style={{ textShadow: '0 0 20px rgba(96,165,250,0.6)' }}
+              initial={{ scale: 0, opacity: 0, rotate: 10 }}
+              animate={{ scale: [0, 1.2, 1], opacity: [0, 1, 0], rotate: [10, -5, 0] }}
+              transition={{ duration: 3.0, times: [0, 0.2, 1] }}
+            >
+              Pick Up!
+            </motion.div>
+            {/* Emoji orbiting around the banner */}
+            {[...Array(6)].map((_, i) => {
+              const angle = (i / 6) * Math.PI * 2;
+              const rx = 80;
+              const ry = 50;
+              return (
+                <motion.div
+                  key={i}
+                  className="absolute text-2xl select-none"
+                  style={{ left: '50%', top: '50%' }}
+                  initial={{ x: -12, y: -12, opacity: 0 }}
+                  animate={{
+                    x: [
+                      Math.cos(angle) * rx - 12,
+                      Math.cos(angle + Math.PI * 2 / 3) * rx - 12,
+                      Math.cos(angle + Math.PI * 4 / 3) * rx - 12,
+                      Math.cos(angle + Math.PI * 2) * rx - 12,
+                    ],
+                    y: [
+                      Math.sin(angle) * ry - 12,
+                      Math.sin(angle + Math.PI * 2 / 3) * ry - 12,
+                      Math.sin(angle + Math.PI * 4 / 3) * ry - 12,
+                      Math.sin(angle + Math.PI * 2) * ry - 12,
+                    ],
+                    opacity: [0, 1, 1, 0],
+                  }}
+                  transition={{ duration: 3.0, ease: 'linear', delay: i * 0.05 }}
+                >
+                  {animEmoji}
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
 
       </AnimatePresence>
 
@@ -695,29 +755,13 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         {/* Status */}
         <div className="text-center">
           {isFinished && (
-            <div className="space-y-2">
-              {gameState.loser ? (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: [0, 1.3, 1] }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
-                >
-                  <div className="text-red-400 font-black text-2xl">
-                    💀 LOSER! 💀
-                  </div>
-                  <div className="text-yellow-300 font-bold text-lg">
-                    {gameState.players.find(p => p.id === gameState.loser)?.name} is the Palace Player!
-                  </div>
-                  <div className="text-green-300 text-sm mt-1">
-                    They deal next game!
-                  </div>
-                </motion.div>
-              ) : gameState.winner ? (
-                <div className="text-yellow-300 font-bold text-lg animate-bounce">
-                  🏆 {gameState.players.find(p => p.id === gameState.winner)?.name} wins!
-                </div>
-              ) : null}
-            </div>
+            <GameEndLeaderboard
+              gameState={gameState}
+              myPlayerId={myPlayerId}
+              phase={leaderboardPhase}
+              onNext={() => setLeaderboardPhase('alltime')}
+              onHome={() => navigate('/')}
+            />
           )}
           {isPlaying && !isFinished && (
             <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
@@ -799,18 +843,35 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             />
           </div>
         )}
+        {/* Reveal remaining face-down palace cards when game ends */}
+        {isFinished && me.palace.some(s => s.faceDown !== null) && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => onStateChange(revealFaceDownCards(gameState, myPlayerId))}
+              className="px-4 py-1.5 bg-indigo-600/80 text-white rounded-lg font-bold text-sm hover:bg-indigo-500 active:scale-95 transition-all"
+            >
+              Reveal Remaining Cards
+            </button>
+          </div>
+        )}
 
         {/* My Hand / Setup Cards - 2-row grid */}
         <div className="flex flex-col items-center gap-1 overflow-visible">
-          <span className="text-[10px] text-green-300 font-medium">
-            {isSetup
-              ? me.setupPhase === 'select-facedown'
-                ? 'Your 9 cards (pick 3 blindly)'
-                : me.setupPhase === 'select-faceup'
-                ? 'Pick 3 for palace face-up'
-                : 'Setup complete'
-              : `Hand (${me.hand.length})`}
-          </span>
+          {isPlaying && source === 'hand' ? (
+            <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
+              Hand ({me.hand.length})
+            </span>
+          ) : (
+            <span className="text-[10px] text-green-300 font-medium">
+              {isSetup
+                ? me.setupPhase === 'select-facedown'
+                  ? 'Your 9 cards (pick 3 blindly)'
+                  : me.setupPhase === 'select-faceup'
+                  ? 'Pick 3 for palace face-up'
+                  : 'Setup complete'
+                : `Hand (${me.hand.length})`}
+            </span>
+          )}
           {isPlaying && source !== 'hand' && me.hand.length === 0 && (
             <span className="text-green-400 text-xs italic py-1">
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
@@ -978,18 +1039,124 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
       ) : (
         <>
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
-          <span className="text-[10px] text-green-300">
-            {isEliminated ? 'Safe!' : (
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            {isEliminated ? (
+              <span className="text-[10px] text-green-300">Safe!</span>
+            ) : (
               <>
                 {formatStatsText(player.stats) && (
-                  <span className="text-yellow-300 mr-1">{formatStatsText(player.stats)}</span>
+                  <span className="text-[9px] text-yellow-300">{formatStatsText(player.stats)}</span>
                 )}
-                {`Hand: ${player.hand.length}`}
+                <span className="bg-white/20 text-green-100 px-1.5 py-0.5 rounded-full text-[9px] font-medium">
+                  Hand: {player.hand.length}
+                </span>
               </>
             )}
-          </span>
+          </div>
         </>
       )}
     </div>
+  );
+}
+
+function GameEndLeaderboard({ gameState, myPlayerId, phase, onNext, onHome }: {
+  gameState: GameState;
+  myPlayerId: string;
+  phase: 'game' | 'alltime';
+  onNext: () => void;
+  onHome: () => void;
+}) {
+  const ranked = computeGameRankings(gameState);
+  const medals = ['🥇', '🥈', '🥉'];
+  const totalPlayers = gameState.players.length;
+
+  if (phase === 'game') {
+    return (
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="bg-black/40 rounded-2xl p-4 w-full max-w-xs mx-auto space-y-3 text-center"
+      >
+        <div className="text-lg font-black text-yellow-300">🏆 Final Rankings</div>
+        <div className="space-y-1.5">
+          {ranked.map((pid, i) => {
+            const player = gameState.players.find(p => p.id === pid);
+            const isMe = pid === myPlayerId;
+            const isLoser = i === ranked.length - 1 && totalPlayers > 1;
+            const medal = isLoser ? '💀' : (medals[i] || `#${i + 1}`);
+            return (
+              <div
+                key={pid}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+                  isMe ? 'bg-yellow-500/30 ring-1 ring-yellow-400 font-bold' : 'bg-white/10'
+                }`}
+              >
+                <span className="text-base w-6">{medal}</span>
+                <span className="text-base">{player?.emoji || DEFAULT_EMOJI}</span>
+                <span className="flex-1 text-left truncate">{player?.name}</span>
+                {isMe && <span className="text-[10px] text-yellow-300">You</span>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-2 justify-center pt-1">
+          <button
+            onClick={onNext}
+            className="px-5 py-2 bg-yellow-500 text-black rounded-xl font-bold text-sm hover:bg-yellow-400 active:scale-95 transition-all"
+          >
+            Next →
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // All-time rankings phase
+  const myRankIndex = ranked.indexOf(myPlayerId);
+  const myPlayer = gameState.players.find(p => p.id === myPlayerId);
+  return (
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="bg-black/40 rounded-2xl p-4 w-full max-w-xs mx-auto space-y-3 text-center"
+    >
+      <div className="text-lg font-black text-yellow-300">📊 All-Time Rankings</div>
+      {myPlayer?.stats && (
+        <div className="bg-yellow-500/20 rounded-xl px-3 py-2 text-sm">
+          <div className="font-bold text-yellow-200 mb-1">
+            {myPlayer.emoji || DEFAULT_EMOJI} {myPlayer.name} ({myRankIndex >= 0 ? (medals[myRankIndex] || '💀') : '—'} this game)
+          </div>
+          <div className="flex justify-center gap-3 text-xs">
+            <span>🥇 {myPlayer.stats.gold}</span>
+            <span>🥈 {myPlayer.stats.silver}</span>
+            <span>🥉 {myPlayer.stats.bronze}</span>
+            {myPlayer.stats.losses > 0 && <span className="text-red-400">💀 {myPlayer.stats.losses}</span>}
+            <span className="text-green-300">{myPlayer.stats.gamesPlayed} played</span>
+          </div>
+        </div>
+      )}
+      {gameState.players.filter(p => p.id !== myPlayerId && p.stats).length > 0 && (
+        <div className="space-y-1">
+          <div className="text-[10px] text-green-400 font-semibold">Other Players</div>
+          {gameState.players.filter(p => p.id !== myPlayerId && p.stats).map(p => (
+            <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 bg-white/10 rounded-lg text-xs">
+              <span>{p.emoji || DEFAULT_EMOJI}</span>
+              <span className="flex-1 text-left truncate">{p.name}</span>
+              {p.stats && (
+                <span className="text-yellow-300 text-[9px]">{formatStatsText(p.stats)}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={onHome}
+        className="w-full py-2 bg-green-700 text-white rounded-xl font-bold text-sm hover:bg-green-600 active:scale-95 transition-all"
+      >
+        🏠 Home
+      </button>
+    </motion.div>
   );
 }

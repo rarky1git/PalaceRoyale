@@ -6,6 +6,9 @@ import { Copy, Check, Users, Loader2 } from 'lucide-react';
 
 const API = `https://${projectId}.supabase.co/functions/v1/make-server-990c827f`;
 
+// Default emoji palette assigned by player join order
+const DEFAULT_PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯', '🐹', '🦜', '🐙'];
+
 export default function LobbyPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -94,6 +97,16 @@ export default function LobbyPage() {
         if (!res.ok) return;
         setPlayers(data.players);
         setExpectedCount(data.playerCount);
+        // Assign default emojis to any new players (by their position in the list)
+        setPlayerEmojiMap(prev => {
+          const updated = { ...prev };
+          (data.players as { id: string; name: string }[]).forEach((p, i) => {
+            if (!updated[p.id]) {
+              updated[p.id] = p.id === myId ? myEmoji : DEFAULT_PLAYER_EMOJIS[i % DEFAULT_PLAYER_EMOJIS.length];
+            }
+          });
+          return updated;
+        });
 
         // Check if game started
         if (data.state) {
