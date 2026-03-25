@@ -629,13 +629,6 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
   if (playedRank === 2) {
     drawCards(s, playerId);
 
-    // Check elimination before bonus — if this was the last card, player wins
-    if (handleElimination(s, playerId)) {
-      s.lastAction = { type: 'sparkle', cards, playerId };
-      s.version++;
-      return s;
-    }
-
     // Check if player has any cards to play as bonus
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
@@ -778,11 +771,6 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
 
   if (playedRank === 2) {
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
-      s.lastAction = { type: 'sparkle', cards, playerId };
-      s.version++;
-      return s;
-    }
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
       player.palace.some(sl => sl.faceDown !== null);
@@ -917,11 +905,6 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
   // Check 2 bonus
   if (playedRank === 2) {
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
-      s.lastAction = { type: 'sparkle', cards, playerId };
-      s.version++;
-      return s;
-    }
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
       player.palace.some(sl => sl.faceDown !== null);
@@ -1126,11 +1109,6 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
 
   if (playedRank === 2) {
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
-      s.lastAction = { type: 'sparkle', cards, playerId };
-      s.version++;
-      return s;
-    }
     const hasCards = player.hand.length > 0 ||
       player.palace.some(sl => sl.faceUp !== null) ||
       player.palace.some(sl => sl.faceDown !== null);
