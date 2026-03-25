@@ -102,16 +102,13 @@ export default function LobbyPage() {
         if (!res.ok) return;
         setPlayers(data.players);
         setExpectedCount(data.playerCount);
-        // Read each player's emoji from the server player record
-        setPlayerEmojiMap(prev => {
-          const updated = { ...prev };
-          (data.players as { id: string; name: string; emoji?: string }[]).forEach(p => {
-            if (!updated[p.id]) {
-              updated[p.id] = p.emoji || DEFAULT_EMOJI_FALLBACK;
-            }
-          });
-          return updated;
+        // Rebuild emoji map fully from server data on every poll so new players'
+        // emojis are immediately visible to both host and non-host players
+        const emojiMap: Record<string, string> = {};
+        (data.players as { id: string; name: string; emoji?: string }[]).forEach(p => {
+          emojiMap[p.id] = p.emoji || DEFAULT_EMOJI_FALLBACK;
         });
+        setPlayerEmojiMap(emojiMap);
 
         // Check if game started
         if (data.state) {
@@ -193,7 +190,7 @@ export default function LobbyPage() {
         {players.map((p, i) => (
           <div key={p.id} className="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">
             <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-lg">
-              {playerEmojiMap[p.id] || p.name[0]}
+              {p.emoji || playerEmojiMap[p.id] || p.name[0]}
             </div>
             <span className="font-medium">{p.name}</span>
             {i === 0 && <span className="text-[10px] bg-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded-full ml-auto">Host</span>}
