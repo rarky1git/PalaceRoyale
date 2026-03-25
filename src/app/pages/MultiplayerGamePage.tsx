@@ -121,9 +121,9 @@ export default function MultiplayerGamePage() {
           const freshData = await freshRes.json();
           if (freshData.state) {
             const reMerged = mergeSetupWithServer(freshData.state, localSetupState, playerId);
+            // Use the re-merged state for subsequent retry attempts, but
+            // do not advance versionRef or UI until a PUT actually succeeds.
             current = reMerged;
-            versionRef.current = reMerged.version;
-            setGameState(reMerged);
           } else {
             break;
           }
