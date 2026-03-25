@@ -21,10 +21,10 @@ function mergeSetupWithServer(
 ): GameState {
   const merged: GameState = JSON.parse(JSON.stringify(serverState));
   const localPlayer = localState.players.find(p => p.id === localPlayerId);
-  if (!localPlayer) return localState;
+  if (!localPlayer) return serverState;
 
   const idx = merged.players.findIndex(p => p.id === localPlayerId);
-  if (idx === -1) return localState;
+  if (idx === -1) return serverState;
 
   // Carry over the local player's completed setup data
   merged.players[idx] = JSON.parse(JSON.stringify(localPlayer));
