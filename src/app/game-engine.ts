@@ -1430,6 +1430,22 @@ export function checkAISteal(state: GameState): GameState | null {
   return null;
 }
 
+// Reveal all face-down palace cards for a player (post-game display only)
+export function revealFaceDownCards(state: GameState, playerId: string): GameState {
+  const s = deepClone(state);
+  const player = s.players.find(p => p.id === playerId);
+  if (!player) return s;
+  for (const slot of player.palace) {
+    if (slot.faceDown !== null && slot.faceUp === null) {
+      // Move face-down card to face-up slot so PalaceDisplay shows it face-up
+      slot.faceUp = slot.faceDown;
+      slot.faceDown = null;
+    }
+  }
+  s.version++;
+  return s;
+}
+
 // ---- Utility ----
 
 function deepClone<T>(obj: T): T {

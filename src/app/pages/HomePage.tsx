@@ -1,11 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Crown, Bot, Wifi, BookOpen, Settings } from 'lucide-react';
+import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw } from 'lucide-react';
 import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats } from '../game-engine';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
 const BOT_EMOJIS = ['🤖', '👾', '🎮', '🃏'];
 const STATS_KEY = 'palace-stats';
+
+function formatShortDateTime(ts?: number): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -20,7 +33,7 @@ export default function HomePage() {
   const [mode, setMode] = useState<'menu' | 'robot-setup' | 'multi-setup'>('menu');
   const [gameCode, setGameCode] = useState('');
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
-  const [savedGames, setSavedGames] = useState<{ code: string; playerId: string }[]>([]);
+  const [savedGames, setSavedGames] = useState<{ code: string; playerId: string; savedAt?: number }[]>([]);
   const [myStats, setMyStats] = useState<PlayerStats | null>(null);
 
   // Auto-focus the custom emoji input when it becomes visible
@@ -44,14 +57,16 @@ export default function HomePage() {
   // Check for saved games on mount
   useState(() => {
     try {
-      const saves: { code: string; playerId: string }[] = [];
+      const saves: { code: string; playerId: string; savedAt?: number }[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key?.startsWith('palace-save-')) {
           const data = JSON.parse(localStorage.getItem(key)!);
-          saves.push({ code: data.code, playerId: data.playerId });
+          saves.push({ code: data.code, playerId: data.playerId, savedAt: data.savedAt });
         }
       }
+      // Sort by most recent first
+      saves.sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0));
       setSavedGames(saves);
     } catch { /* ignore */ }
   });
@@ -194,19 +209,18 @@ export default function HomePage() {
             </div>
           )}
           {savedGames.length > 0 && (
-            <div className="space-y-2 mb-2">
-              <span className="text-xs text-green-400">Rejoin Game:</span>
-              {savedGames.map(sg => (
-                <button
-                  key={sg.code}
-                  onClick={() => rejoinGame(sg.code, sg.playerId)}
-                  className="flex items-center justify-between w-full px-4 py-3 bg-purple-500/20 border border-purple-400/30 rounded-xl hover:bg-purple-500/30 active:scale-[0.98] transition-all"
-                >
-                  <span className="font-mono font-bold text-purple-300">{sg.code}</span>
-                  <span className="text-xs text-purple-400">Tap to rejoin →</span>
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => navigate('/rejoin-games')}
+              className="flex items-center gap-3 w-full px-5 py-4 bg-purple-500/20 border border-purple-400/30 backdrop-blur rounded-xl hover:bg-purple-500/30 active:scale-[0.98] transition-all"
+            >
+              <RefreshCw className="w-6 h-6 text-purple-300" />
+              <div className="text-left">
+                <div className="font-bold text-purple-100">Rejoin Game</div>
+                {savedGames[0].savedAt && (
+                  <div className="text-xs text-purple-400">{formatShortDateTime(savedGames[0].savedAt)}</div>
+                )}
+              </div>
+            </button>
           )}
           <button
             onClick={() => setMode('robot-setup')}
@@ -287,6 +301,24 @@ export default function HomePage() {
 
       {mode === 'multi-setup' && (
         <div className="flex flex-col gap-4 w-full max-w-xs">
+          {/* Most recent rejoin game (only if within last hour) */}
+          {(() => {
+            const recent = savedGames[0];
+            const isRecent = recent?.savedAt && Date.now() - recent.savedAt < 60 * 60 * 1000;
+            if (!isRecent || !recent) return null;
+            return (
+              <button
+                onClick={() => rejoinGame(recent.code, recent.playerId)}
+                className="flex items-center gap-3 w-full px-4 py-3 bg-purple-500/20 border border-purple-400/30 rounded-xl hover:bg-purple-500/30 active:scale-[0.98] transition-all"
+              >
+                <RefreshCw className="w-5 h-5 text-purple-300 shrink-0" />
+                <div className="text-left">
+                  <div className="text-sm font-bold text-purple-100">Rejoin <span className="font-mono">{recent.code}</span></div>
+                  <div className="text-[11px] text-purple-400">{formatShortDateTime(recent.savedAt)}</div>
+                </div>
+              </button>
+            );
+          })()}
           <button onClick={() => setMode('menu')} className="text-green-300 text-sm self-start hover:text-white">← Back</button>
           <input
             value={playerName}

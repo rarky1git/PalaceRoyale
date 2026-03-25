@@ -34,7 +34,7 @@ function generateCode(): string {
 // Create a new game lobby
 app.post("/make-server-990c827f/games", async (c) => {
   try {
-    const { playerName, playerCount } = await c.req.json();
+    const { playerName, playerEmoji, playerCount } = await c.req.json();
     if (!playerName || !playerCount) {
       return c.json({ error: "playerName and playerCount required" }, 400);
     }
@@ -54,7 +54,7 @@ app.post("/make-server-990c827f/games", async (c) => {
       code,
       playerCount,
       hostId: playerId,
-      players: [{ id: playerId, name: playerName }],
+      players: [{ id: playerId, name: playerName, emoji: playerEmoji || '🦆' }],
       state: null, // Game state set when game starts
       createdAt: Date.now(),
     };
@@ -72,7 +72,7 @@ app.post("/make-server-990c827f/games", async (c) => {
 app.post("/make-server-990c827f/games/:code/join", async (c) => {
   try {
     const code = c.req.param('code');
-    const { playerName } = await c.req.json();
+    const { playerName, playerEmoji } = await c.req.json();
     if (!playerName) return c.json({ error: "playerName required" }, 400);
 
     const gameData = await kv.get(`game:${code}`);
@@ -85,7 +85,7 @@ app.post("/make-server-990c827f/games/:code/join", async (c) => {
     }
 
     const playerId = `player-${gameData.players.length}`;
-    gameData.players.push({ id: playerId, name: playerName });
+    gameData.players.push({ id: playerId, name: playerName, emoji: playerEmoji || '🦆' });
     await kv.set(`game:${code}`, gameData);
 
     console.log(`Player ${playerName} joined game ${code} as ${playerId}`);

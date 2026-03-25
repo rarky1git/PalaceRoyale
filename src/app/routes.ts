@@ -5,6 +5,7 @@ import LobbyPage from './pages/LobbyPage';
 import MultiplayerGamePage from './pages/MultiplayerGamePage';
 import HowToPlayPage from './pages/HowToPlayPage';
 import SettingsPage from './pages/SettingsPage';
+import RejoinGamesPage from './pages/RejoinGamesPage';
 
 export const router = createBrowserRouter([
   { path: '/', Component: HomePage },
@@ -13,4 +14,5 @@ export const router = createBrowserRouter([
   { path: '/multiplayer', Component: MultiplayerGamePage },
   { path: '/how-to-play', Component: HowToPlayPage },
   { path: '/settings', Component: SettingsPage },
+  { path: '/rejoin-games', Component: RejoinGamesPage },
 ]);
