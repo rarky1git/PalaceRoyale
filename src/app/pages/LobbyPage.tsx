@@ -124,6 +124,8 @@ export default function LobbyPage() {
     const playerNames = players.map(p => p.name);
     // Read emojis from server player records
     const emojis = players.map(p => p.emoji || playerEmojiMap[p.id] || DEFAULT_EMOJI_FALLBACK);
+    // Use host's explicit deck selection directly — do not cap by player count.
+    // The host may intentionally use multiple decks with a smaller group.
     const state = initGame(playerNames, 0, deckCount ?? 1, emojis);
     try {
       const res = await fetch(`${API}/games/${gameCode}`, {
