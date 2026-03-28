@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw } from 'lucide-react';
-import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats } from '../game-engine';
+import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
-const BOT_EMOJIS = ['🤖', '👾', '🎮', '🃏'];
 const STATS_KEY = 'palace-stats';
 
 function formatShortDateTime(ts?: number): string {
@@ -120,11 +119,15 @@ export default function HomePage() {
     if (!playerName.trim()) return;
     const names = [playerName.trim()];
     const emojis = [playerEmoji];
+
+    // Shuffle BOT_PROFILES and pick unique knights for each bot slot
+    const shuffled = [...BOT_PROFILES].sort(() => Math.random() - 0.5);
     for (let i = 1; i < playerCount; i++) {
-      names.push(`Bot ${i}`);
-      emojis.push(BOT_EMOJIS[(i - 1) % BOT_EMOJIS.length]);
+      const profile = shuffled[(i - 1) % shuffled.length];
+      names.push(profile.name);
+      emojis.push(profile.emoji);
     }
-    navigate('/robot', { state: { playerNames: names, playerEmojis: emojis, dealerIndex: 0 } });
+    navigate('/robot', { state: { playerNames: names, playerEmojis: emojis, dealerIndex: 0, deckCount } });
   };
 
   const goMultiplayer = () => {
@@ -395,7 +398,7 @@ export default function HomePage() {
         </div>
       )}
       <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
-        v0.5
+        v0.5.1
       </footer>
     </div>
   );

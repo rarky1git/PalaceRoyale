@@ -14,6 +14,8 @@ import {
   setPlayerEmoji, nudgeCurrentPlayer,
   setPlayerStats, computeGameRankings,
   revealFaceDownCards,
+  resetGame, requestNewGame,
+  getBotProfile, getRandomBotDelay,
 } from '../game-engine';
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
@@ -109,6 +111,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const isPlaying = gameState.phase === 'playing';
   const isFinished = gameState.phase === 'finished';
   const isEliminated = (gameState.eliminated || []).includes(myPlayerId);
+  // During multiplayer setup, defer opponent status until local player finishes
+  const deferredSetup = isMultiplayer && isSetup && me.setupPhase !== 'done';
 
   // Palace visibility logic
   const palaceHasCards = me.palace.some(s => s.faceUp !== null || s.faceDown !== null);
@@ -215,20 +219,29 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     if (isMultiplayer || !isPlaying) return;
     if (isMyTurn) return;
 
+    // Get current player's bot profile for variable timing
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    const botProfile = getBotProfile(currentPlayer.name);
+    const aiDelay = botProfile
+      ? getRandomBotDelay(botProfile)
+      : Math.floor(800 + Math.random() * 800); // fallback: 800–1600ms random
+
     const timer = setTimeout(() => {
       try {
-        // Handle pending counter for AI
         if (gameState.pendingCounter) {
-          const newState = aiHandleCounter(gameState);
+          // Profile of the player who needs to handle the counter
+          const counterPlayer = gameState.players[gameState.currentPlayerIndex];
+          const counterProfile = getBotProfile(counterPlayer.name);
+          const newState = aiHandleCounter(gameState, counterProfile);
           onStateChange(newState);
           return;
         }
         const stealState = checkAISteal(gameState);
         if (stealState) { onStateChange(stealState); return; }
-        const newState = aiPlayTurn(gameState);
+        const newState = aiPlayTurn(gameState, botProfile);
         onStateChange(newState);
       } catch (e) { console.log('AI error:', e); }
-    }, 1200);
+    }, aiDelay);
     return () => clearTimeout(timer);
   }, [gameState.version, isMyTurn, isPlaying, isMultiplayer]);
 
@@ -239,7 +252,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       let s = deepClone(gameState);
       for (const p of s.players) {
         if (p.id === myPlayerId) continue;
-        if (p.setupPhase !== 'done') s = aiSetup(s, p.id);
+        if (p.setupPhase !== 'done') {
+          const p2Profile = getBotProfile(p.name);
+          s = aiSetup(s, p.id, p2Profile);
+        }
       }
       if (s.version !== gameState.version) onStateChange(s);
     }, 800);
@@ -278,6 +294,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     onStateChange(setPlayerStats(gameState, myPlayerId, newStats));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFinished, gameState.loser]);
+
+  // Reset one-shot refs when a new game starts (rematch)
+  useEffect(() => {
+    if (isSetup) {
+      ranksSavedRef.current = false;
+      statsInjectedRef.current = false;
+      setLeaderboardPhase('game');
+    }
+  }, [isSetup]);
 
   const playQuack = () => {
     try {
@@ -399,6 +424,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       const stealCards = canStealTurn(gameState, myPlayerId);
       if (!stealCards) { setError("Can't steal"); return; }
       const newState = stealTurn(gameState, myPlayerId, stealCards.map(c => c.id));
+      onStateChange(newState);
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const isHost = myPlayerId === 'player-0';
+  const hasRequestedNewGame = (gameState.newGameRequested || []).includes(myPlayerId);
+
+  const handleNewGame = () => {
+    try {
+      const newState = resetGame(gameState);
+      onStateChange(newState);
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleRequestNewGame = () => {
+    try {
+      const newState = requestNewGame(gameState, myPlayerId);
       onStateChange(newState);
     } catch (e: any) { setError(e.message); }
   };
@@ -672,6 +714,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               eliminated={gameState.eliminated || []}
               mini={miniOpponents}
               isBeforePlayer
+              deferredSetup={deferredSetup}
             />
             <div className="shrink-0 w-px self-stretch bg-white/20 mx-1" />
           </>
@@ -683,8 +726,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === nextOpponent.id}
             isSetup={isSetup}
             isEliminated={(gameState.eliminated || []).includes(nextOpponent.id)}
+            eliminated={gameState.eliminated || []}
             mini={miniOpponents}
             isAfterPlayer
+            deferredSetup={deferredSetup}
           />
         )}
         {otherOpponents.map(opp => (
@@ -694,7 +739,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === opp.id}
             isSetup={isSetup}
             isEliminated={(gameState.eliminated || []).includes(opp.id)}
+            eliminated={gameState.eliminated || []}
             mini={miniOpponents}
+            deferredSetup={deferredSetup}
           />
         ))}
         {opponents.length > 0 && (
@@ -1008,6 +1055,28 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
         )}
 
+        {/* New Game buttons - multiplayer, shown when game is finished */}
+        {isFinished && isMultiplayer && (
+          <div className="flex gap-2 justify-center pt-1">
+            {isHost ? (
+              <button
+                onClick={handleNewGame}
+                className="px-5 py-2 bg-yellow-500 text-black rounded-lg font-bold text-sm hover:bg-yellow-400 active:scale-95 transition-all"
+              >
+                🔄 New Game
+              </button>
+            ) : (
+              <button
+                onClick={handleRequestNewGame}
+                disabled={hasRequestedNewGame}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm disabled:opacity-40 hover:bg-blue-500 active:scale-95 transition-all"
+              >
+                {hasRequestedNewGame ? '✓ Requested' : '🔄 Request New Game'}
+              </button>
+            )}
+          </div>
+        )}
+
         {isSetup && me.setupPhase !== 'done' && (
           <div className="flex justify-center pt-1">
             <button
@@ -1043,9 +1112,9 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer }: {
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup }: {
   player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
-  isBeforePlayer?: boolean; isAfterPlayer?: boolean;
+  isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
 }) {
   return (
     <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
@@ -1060,7 +1129,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
       </span>
       {isSetup ? (
         <span className="text-[10px] text-green-300">
-          {player.setupPhase === 'done' ? '✅ Ready' : '⏳ Setting up'}
+          {deferredSetup ? '...' : (player.setupPhase === 'done' ? '✅ Ready' : '⏳ Setting up')}
         </span>
       ) : (
         <>
@@ -1177,6 +1246,17 @@ function GameEndLeaderboard({ gameState, myPlayerId, phase, onNext, onHome }: {
           ))}
         </div>
       )}
+      {(gameState.newGameRequested || []).length > 0 && (() => {
+        const requesters = gameState.newGameRequested!
+          .map(pid => gameState.players.find(p => p.id === pid)?.name)
+          .filter(Boolean);
+        const verb = requesters.length === 1 ? 'wants' : 'want';
+        return (
+          <div className="text-[10px] text-blue-300">
+            🔄 {requesters.join(', ')} {verb} to play again
+          </div>
+        );
+      })()}
       <button
         onClick={onHome}
         className="w-full py-2 bg-green-700 text-white rounded-xl font-bold text-sm hover:bg-green-600 active:scale-95 transition-all"

@@ -53,6 +53,7 @@ export interface GameState {
     bonusPlayerId: string;
   } | null; // Next player can counter a draw bonus by playing a valid card
   nudgeCount?: number; // Incremented when a non-current player nudges the current player
+  newGameRequested?: string[]; // Player IDs that have requested a new game (multiplayer)
 }
 
 // ---- Helpers ----
@@ -99,7 +100,7 @@ export interface BotProfile {
   counterChance: number;   // 0–1: probability of attempting a counter
   saveSpecials: boolean;   // if true, hoard 2s and 10s for later; if false, use freely
   preferHighCards: boolean; // if true, play highest valid cards first
-  riskTolerance: number;   // 0–1: willingness to gamble (e.g. Henry's chaos)
+  riskTolerance: number;   // 0–1: willingness to gamble on face-down plays and big swings
 }
 
 export const BOT_PROFILES: BotProfile[] = [
@@ -625,7 +626,8 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
 
     // Check win before bonus
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -644,7 +646,8 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
     s.log.push('10 played! Pile is wiped out!');
 
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -773,7 +776,8 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
     s.pickupPile = [];
     s.log.push('Four of a kind! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -789,7 +793,8 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
     s.pickupPile = [];
     s.log.push('10 played! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -848,17 +853,6 @@ export function pickupPile(state: GameState, playerId: string): GameState {
 
   if (pIdx !== s.currentPlayerIndex) throw new Error('Not your turn');
 
-  // Skip steal check during counter scenarios (player is forced to pick up)
-  if (!s.pendingCounter) {
-    // Check if anyone can steal first
-    for (const otherPlayer of s.players) {
-      if (otherPlayer.id === playerId) continue;
-      if (canStealTurn(s, otherPlayer.id)) {
-        throw new Error(`Turn must be stolen by ${otherPlayer.name} (four of a kind available)`);
-      }
-    }
-  }
-
   player.hand = [...player.hand, ...s.pickupPile];
   s.log.push(`${player.name} picks up the pile (${s.pickupPile.length} cards).`);
   s.pickupPile = [];
@@ -916,7 +910,8 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     s.pickupPile = [];
     s.log.push('Four of a kind! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -933,7 +928,8 @@ export function playDrawBonus(state: GameState, playerId: string, cardIds: strin
     s.pickupPile = [];
     s.log.push('10 played! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -1031,7 +1027,8 @@ export function stealTurn(state: GameState, stealingPlayerId: string, cardIds: s
   s.currentPlayerIndex = s.players.findIndex(p => p.id === stealingPlayerId);
   drawCards(s, stealingPlayerId);
 
-  if (handleElimination(s, stealingPlayerId)) {
+  if (handleElimination(s, stealingPlayerId) || s.eliminated.includes(stealingPlayerId)) {
+    if (s.phase !== 'finished') advanceTurn(s);
     s.lastAction = { type: 'wipeout', cards: cardIds.map(id => ({ id, suit: 'spades' as Suit, rank: 0 })), playerId: stealingPlayerId };
     s.version++;
     return s;
@@ -1122,7 +1119,8 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
     s.pickupPile = [];
     s.log.push('Four of a kind! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'wipeout', cards, playerId };
       s.version++;
       return s;
@@ -1138,7 +1136,8 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
     s.pickupPile = [];
     s.log.push('10 played! Pile wiped!');
     drawCards(s, playerId);
-    if (handleElimination(s, playerId)) {
+    if (handleElimination(s, playerId) || s.eliminated.includes(playerId)) {
+      if (s.phase !== 'finished') advanceTurn(s);
       s.lastAction = { type: 'slam', cards, playerId };
       s.version++;
       return s;
@@ -1233,7 +1232,7 @@ export function getCounterPlayableCards(state: GameState, playerId: string): Car
 }
 
 // AI handles counter opportunity
-export function aiHandleCounter(state: GameState): GameState {
+export function aiHandleCounter(state: GameState, profile?: BotProfile): GameState {
   const s = deepClone(state);
   if (!s.pendingCounter) return s;
 
@@ -1263,7 +1262,8 @@ export function aiHandleCounter(state: GameState): GameState {
 
     const lowestRank = sorted[0].rank;
     // Counter if lowest available card is relatively low (not wasting specials)
-    const shouldCounter = lowestRank !== 2 && lowestRank !== 10 && lowestRank <= 9;
+    const notWastingSpecial = profile?.saveSpecials === false || (lowestRank !== 2 && lowestRank !== 10);
+    const shouldCounter = notWastingSpecial && Math.random() < (profile?.counterChance ?? 0.5);
 
     if (shouldCounter) {
       // Play all cards of the chosen rank
@@ -1282,7 +1282,7 @@ export function aiHandleCounter(state: GameState): GameState {
 
 // ---- AI ----
 
-export function aiSetup(state: GameState, playerId: string): GameState {
+export function aiSetup(state: GameState, playerId: string, profile?: BotProfile): GameState {
   let s = deepClone(state);
   const player = s.players.find(p => p.id === playerId)!;
 
@@ -1294,20 +1294,26 @@ export function aiSetup(state: GameState, playerId: string): GameState {
 
   const player2 = s.players.find(p => p.id === playerId)!;
   if (player2.setupPhase === 'select-faceup') {
-    // Pick the 3 highest cards for face-up
-    const sorted = [...player2.setupCards].sort((a, b) => {
-      // Prefer high cards and special cards (2, 10) for face-up
-      const aVal = a.rank === 2 ? 15 : a.rank === 10 ? 16 : a.rank;
-      const bVal = b.rank === 2 ? 15 : b.rank === 10 ? 16 : b.rank;
-      return bVal - aVal;
-    });
-    s = selectFaceUpCards(s, playerId, sorted.slice(0, 3).map(c => c.id));
+    if (profile?.saveSpecials === false) {
+      // Pick 3 random cards from setupCards instead of highest
+      const shuffledSetup = shuffle([...player2.setupCards]);
+      s = selectFaceUpCards(s, playerId, shuffledSetup.slice(0, 3).map(c => c.id));
+    } else {
+      // Pick the 3 highest cards for face-up
+      const sorted = [...player2.setupCards].sort((a, b) => {
+        // Prefer high cards and special cards (2, 10) for face-up
+        const aVal = a.rank === 2 ? 15 : a.rank === 10 ? 16 : a.rank;
+        const bVal = b.rank === 2 ? 15 : b.rank === 10 ? 16 : b.rank;
+        return bVal - aVal;
+      });
+      s = selectFaceUpCards(s, playerId, sorted.slice(0, 3).map(c => c.id));
+    }
   }
 
   return s;
 }
 
-export function aiPlayTurn(state: GameState): GameState {
+export function aiPlayTurn(state: GameState, profile?: BotProfile): GameState {
   let s = deepClone(state);
   const player = s.players[s.currentPlayerIndex];
 
@@ -1331,20 +1337,10 @@ export function aiPlayTurn(state: GameState): GameState {
   const playable = getPlayableCards(s, player.id);
 
   if (playable.length === 0) {
-    // Try to pick up, but check steal
     try {
       s = pickupPile(s, player.id);
     } catch {
-      // Someone can steal - but in robot mode we handle this differently
-      // For now, force pickup
-      const forcedState = deepClone(s);
-      const fp = forcedState.players[forcedState.currentPlayerIndex];
-      fp.hand = [...fp.hand, ...forcedState.pickupPile];
-      forcedState.pickupPile = [];
-      forcedState.log.push(`${fp.name} picks up the pile.`);
-      advanceTurn(forcedState);
-      forcedState.version++;
-      return forcedState;
+      return s;
     }
     return s;
   }
@@ -1357,14 +1353,23 @@ export function aiPlayTurn(state: GameState): GameState {
     byRank.get(c.rank)!.push(c);
   }
 
-  // Sort ranks by value (play lowest first), but save 2s and 10s
+  // Sort ranks by value, profile-aware: save specials or prefer high cards
   const ranks = [...byRank.keys()].sort((a, b) => {
-    const aVal = a === 2 ? 100 : a === 10 ? 99 : a;
-    const bVal = b === 2 ? 100 : b === 10 ? 99 : b;
-    return aVal - bVal;
+    const specialWeight = (r: number) => {
+      if (!profile || profile.saveSpecials) {
+        return r === 2 ? 100 : r === 10 ? 99 : r;
+      }
+      return r; // treat specials as normal values
+    };
+    const aVal = specialWeight(a);
+    const bVal = specialWeight(b);
+    // preferHighCards: descending; otherwise ascending
+    return profile?.preferHighCards ? bVal - aVal : aVal - bVal;
   });
 
-  const chosenRank = ranks[0];
+  const chosenRank = (profile?.riskTolerance ?? 0) >= 0.9 && Math.random() < 0.3
+    ? ranks[Math.floor(Math.random() * ranks.length)]
+    : ranks[0];
   const chosenCards = byRank.get(chosenRank)!;
 
   try {
@@ -1400,12 +1405,20 @@ export function aiPlayTurn(state: GameState): GameState {
     }
 
     const bonusRanks = [...bonusByRank.keys()].sort((a, b) => {
-      const aVal = a === 2 ? 100 : a === 10 ? 99 : a;
-      const bVal = b === 2 ? 100 : b === 10 ? 99 : b;
-      return aVal - bVal;
+      const specialWeight = (r: number) => {
+        if (!profile || profile.saveSpecials) {
+          return r === 2 ? 100 : r === 10 ? 99 : r;
+        }
+        return r;
+      };
+      const aVal = specialWeight(a);
+      const bVal = specialWeight(b);
+      return profile?.preferHighCards ? bVal - aVal : aVal - bVal;
     });
 
-    const bonusRank = bonusRanks[0];
+    const bonusRank = (profile?.riskTolerance ?? 0) >= 0.9 && Math.random() < 0.3
+      ? bonusRanks[Math.floor(Math.random() * bonusRanks.length)]
+      : bonusRanks[0];
     const bonusCards = bonusByRank.get(bonusRank)!;
 
     try {
@@ -1473,6 +1486,44 @@ export function revealFaceDownCards(state: GameState, playerId: string): GameSta
       slot.faceUp = slot.faceDown;
       slot.faceDown = null;
     }
+  }
+  s.version++;
+  return s;
+}
+
+// Reset game for rematch — same players, new deal. Loser deals.
+export function resetGame(state: GameState, numberOfDecks: number = 1): GameState {
+  const playerNames = state.players.map(p => p.name);
+  const playerEmojis = state.players.map(p => p.emoji || '🦆');
+  const playerStats = state.players.map(p => p.stats);
+
+  // Loser deals next game
+  const loserIndex = state.loser ? state.players.findIndex(p => p.id === state.loser) : 0;
+  const dealerIndex = loserIndex >= 0 ? loserIndex : 0;
+
+  const newState = initGame(playerNames, dealerIndex, numberOfDecks, playerEmojis);
+
+  // Carry version forward so server accepts the update
+  newState.version = state.version + 1;
+
+  // Carry stats forward
+  for (let i = 0; i < newState.players.length; i++) {
+    if (playerStats[i]) {
+      newState.players[i].stats = playerStats[i];
+    }
+  }
+
+  return newState;
+}
+
+// Request a new game (opponent → host)
+export function requestNewGame(state: GameState, playerId: string): GameState {
+  const s = deepClone(state);
+  if (!s.newGameRequested) s.newGameRequested = [];
+  if (!s.newGameRequested.includes(playerId)) {
+    s.newGameRequested.push(playerId);
+    const player = s.players.find(p => p.id === playerId);
+    if (player) s.log.push(`${player.name} wants to play again!`);
   }
   s.version++;
   return s;
