@@ -27,11 +27,63 @@ function Pill({ children, color = 'yellow' }: { children: React.ReactNode; color
     blue: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
     purple: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
     green: 'bg-green-500/20 text-green-300 border-green-500/40',
+    orange: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
   };
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold border ${colors[color] || colors.yellow}`}>
       {children}
     </span>
+  );
+}
+
+const rankRules: Record<number, { label: string; description: string; color?: string }> = {
+  2:  { label: '2', description: 'Wild reset — can be played on any card. The pile continues normally from 2 (low value). Next player can play anything.', color: 'bg-blue-200' },
+  7:  { label: '7', description: 'Reverse mirror — next player must play a card equal to or lower than 7 (not higher).', color: 'bg-orange-200' },
+  10: { label: '10', description: 'Wipeout — clears the entire discard pile. Grants a bonus turn. Can be played on any card.', color: 'bg-red-200' },
+  3:  { label: '3',  description: 'Standard card. Must be played on equal or higher rank.' },
+  4:  { label: '4',  description: 'Standard card. Must be played on equal or higher rank.' },
+  5:  { label: '5',  description: 'Standard card. Must be played on equal or higher rank.' },
+  6:  { label: '6',  description: 'Standard card. Must be played on equal or higher rank.' },
+  8:  { label: '8',  description: 'Standard card. Must be played on equal or higher rank.' },
+  9:  { label: '9',  description: 'Standard card. Must be played on equal or higher rank.' },
+  11: { label: 'J',  description: 'Jack. Must be played on equal or higher rank.' },
+  12: { label: 'Q',  description: 'Queen. Must be played on equal or higher rank.' },
+  13: { label: 'K',  description: 'King. Must be played on equal or higher rank.' },
+  14: { label: 'A',  description: 'Ace — the highest standard card. Very difficult to beat.' },
+};
+
+const RANK_ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 2];
+
+function InteractiveCardHierarchy() {
+  const [selectedRank, setSelectedRank] = useState<number | null>(null);
+  return (
+    <div className="space-y-2">
+      <p className="text-xs">Click a rank to see its rules:</p>
+      <div className="flex flex-wrap gap-1 justify-center py-1">
+        {RANK_ORDER.map(rank => {
+          const rule = rankRules[rank];
+          return (
+            <button
+              key={rank}
+              onClick={() => setSelectedRank(selectedRank === rank ? null : rank)}
+              className={`px-2 py-1 rounded text-xs font-bold border-2 transition-colors
+                ${selectedRank === rank ? 'border-white' : 'border-transparent'}
+                ${rule.color ?? 'bg-gray-200'}
+              `}
+            >
+              {rule.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center text-[10px] text-green-400">← lowest &nbsp;&nbsp;&nbsp; highest →</div>
+      {selectedRank !== null && rankRules[selectedRank] && (
+        <div className="mt-1 p-2 bg-white/10 rounded text-xs">
+          <span className="font-bold">{rankRules[selectedRank].label}:</span>{' '}
+          {rankRules[selectedRank].description}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -66,6 +118,7 @@ const sections: Section[] = [
     id: 'special', title: 'Special Cards', emoji: '✨',
     content: (
       <div className="space-y-2">
+        <InteractiveCardHierarchy />
         <RuleCard emoji="2" title="2 - Bonus Action">Plays on anything. Get a bonus turn. Can't end game with a 2.</RuleCard>
         <RuleCard emoji="7" title="7 - Reversal">Next player must play 7 or lower.</RuleCard>
         <RuleCard emoji="10" title="10 - Wipeout">Clears the pile. Get a bonus turn.</RuleCard>

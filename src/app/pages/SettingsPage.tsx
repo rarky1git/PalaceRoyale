@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { GameSettings } from '../contexts/SettingsContext';
 
@@ -47,11 +47,19 @@ const SETTING_ROWS: SettingRow[] = [
     iconOn: <Bug className="w-5 h-5 text-yellow-300" />,
     iconOff: <Bug className="w-5 h-5 text-green-500" />,
   },
+  {
+    key: 'beginnerMode',
+    label: 'Beginner Mode',
+    description: 'Color-codes special cards (2, 7, 10) and flashes the board on your turn',
+    iconOn: <GraduationCap className="w-5 h-5 text-yellow-300" />,
+    iconOff: <GraduationCap className="w-5 h-5 text-green-500" />,
+  },
 ];
 
 const GROUPS: { title: string; keys: Array<keyof GameSettings> }[] = [
   { title: 'Audio', keys: ['soundEnabled', 'musicEnabled'] },
   { title: 'Display', keys: ['fullscreenMode', 'particleEffects'] },
+  { title: 'Gameplay', keys: ['beginnerMode'] },
   { title: 'Developer', keys: ['debugMode'] },
 ];
 

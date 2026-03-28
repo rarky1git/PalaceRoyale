@@ -8,6 +8,7 @@ export interface GameSettings {
   particleEffects: boolean;
   vsyncEnabled: boolean;
   debugMode: boolean;
+  beginnerMode: boolean;
 }
 
 const SETTINGS_KEY = 'palace-settings';
@@ -19,6 +20,7 @@ const defaultSettings: GameSettings = {
   particleEffects: true,
   vsyncEnabled: true,
   debugMode: false,
+  beginnerMode: false,
 };
 
 interface SettingsContextValue {
