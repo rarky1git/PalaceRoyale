@@ -74,19 +74,22 @@ function InteractiveCardHierarchy() {
   return (
     <div className="space-y-3">
       <p>Cards rank from lowest to highest. A card can only be played on a card of <strong className="text-white">equal or lower</strong> value (except special cards).</p>
-      <div className="flex flex-wrap gap-1.5 justify-center py-1">
+      <div className="flex flex-wrap gap-2 justify-center py-1">
         {RANK_ORDER.map(rank => {
           const rule = rankRules[rank];
+          const isSelected = selectedRank === rank;
           return (
             <button
               key={rank}
-              onClick={() => setSelectedRank(selectedRank === rank ? null : rank)}
-              className={`px-2 py-1 rounded text-sm font-bold border-2 transition-colors
-                ${selectedRank === rank ? 'border-white' : 'border-transparent'}
-                ${rule.color ?? 'bg-gray-200'}
+              onClick={() => setSelectedRank(isSelected ? null : rank)}
+              className={`w-10 h-14 rounded-lg border-2 flex flex-col items-start justify-between p-0.5 shadow-md transition-all active:scale-95
+                ${rule.color ?? 'bg-white'}
+                ${isSelected ? 'border-white ring-2 ring-white -translate-y-1 shadow-lg shadow-white/40' : 'border-gray-400'}
               `}
             >
-              {rule.label}
+              <span className="text-[11px] font-bold leading-none text-gray-900">{rule.label}</span>
+              <span className="self-center text-sm text-gray-900">♠</span>
+              <span className="text-[11px] font-bold leading-none self-end rotate-180 text-gray-900">{rule.label}</span>
             </button>
           );
         })}

@@ -9,6 +9,7 @@ export interface GameSettings {
   vsyncEnabled: boolean;
   debugMode: boolean;
   beginnerMode: boolean;
+  turnHighlight: boolean;
 }
 
 const SETTINGS_KEY = 'palace-settings';
@@ -21,6 +22,7 @@ const defaultSettings: GameSettings = {
   vsyncEnabled: true,
   debugMode: false,
   beginnerMode: false,
+  turnHighlight: false,
 };
 
 interface SettingsContextValue {

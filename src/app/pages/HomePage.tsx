@@ -292,6 +292,20 @@ export default function HomePage() {
               ))}
             </div>
           </div>
+          <div>
+            <label className="text-sm text-green-300 mb-1 block">Card Decks</label>
+            <div className="flex gap-2">
+              {Array.from({ length: MAX_DECKS }, (_, i) => i + 1).map(n => (
+                <button
+                  key={n}
+                  onClick={() => setDeckCount(n)}
+                  className={`flex-1 py-2 rounded-lg font-bold transition-all ${deckCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             onClick={startRobot}
             disabled={!playerName.trim()}
@@ -398,7 +412,7 @@ export default function HomePage() {
         </div>
       )}
       <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
-        v0.5.1
+        v0.6.0
       </footer>
     </div>
   );
