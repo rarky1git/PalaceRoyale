@@ -40,6 +40,15 @@ function saveLocalStats(stats: PlayerStats): void {
   } catch { /* ignore */ }
 }
 
+function getRankLabel(playerId: string, eliminated: string[]): string {
+  const idx = eliminated.indexOf(playerId);
+  if (idx === 0) return '🥇 Gold!';
+  if (idx === 1) return '🥈 Silver!';
+  if (idx === 2) return '🥉 Bronze!';
+  if (idx >= 3) return '✅ Safe!';
+  return 'Safe!';
+}
+
 // Returns a compact medal string like "🥇2 🥈1" or undefined if no medals
 function formatStatsText(stats: PlayerStats | undefined): string | undefined {
   if (!stats) return undefined;
@@ -89,6 +98,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
   const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
+  const [palaceValidFlash, setPalaceValidFlash] = useState<string | null>(null);
   const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
@@ -157,6 +167,20 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   useEffect(() => () => {
     if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
   }, []);
+
+  // Detect valid palace face-down reveal and trigger green flash
+  useEffect(() => {
+    if (gameState.lastAction?.type !== 'play') return;
+    const actingPlayer = gameState.players.find(p => p.id === gameState.lastAction?.playerId);
+    if (!actingPlayer) return;
+    // Heuristic: player has no hand cards and draw pile is empty => palace phase
+    const isPalacePhase = actingPlayer.hand.length === 0 && gameState.drawPile.length === 0;
+    if (isPalacePhase) {
+      setPalaceValidFlash(actingPlayer.id);
+      setTimeout(() => setPalaceValidFlash(null), 800);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.lastAction, gameState.version]);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -645,6 +669,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
               isSetup={isSetup}
               isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
+              eliminated={gameState.eliminated || []}
               mini={miniOpponents}
               isBeforePlayer
             />
@@ -840,6 +865,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               centered={palaceIsActive}
               showRotation
               playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
+              isValidReveal={palaceValidFlash === myPlayerId}
             />
           </div>
         )}
@@ -1017,8 +1043,8 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBeforePlayer, isAfterPlayer }: {
-  player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; mini?: boolean;
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer }: {
+  player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
   isBeforePlayer?: boolean; isAfterPlayer?: boolean;
 }) {
   return (
@@ -1041,7 +1067,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
           <div className="flex items-center gap-1 flex-wrap justify-center">
             {isEliminated ? (
-              <span className="text-[10px] text-green-300">Safe!</span>
+              <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
               <>
                 {formatStatsText(player.stats) && (

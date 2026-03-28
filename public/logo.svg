@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Crown background circle -->
+  <circle cx="256" cy="256" r="256" fill="#14532d"/>
+  <!-- Crown shape -->
+  <path d="M128 320 L128 200 L192 260 L256 180 L320 260 L384 200 L384 320 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="4"/>
+  <!-- Crown base bar -->
+  <rect x="110" y="310" width="292" height="40" rx="8" fill="#fbbf24" stroke="#f59e0b" stroke-width="4"/>
+  <!-- Crown jewels -->
+  <circle cx="192" cy="255" r="12" fill="#ef4444"/>
+  <circle cx="256" cy="235" r="14" fill="#3b82f6"/>
+  <circle cx="320" cy="255" r="12" fill="#ef4444"/>
+  <!-- Card suits at the bottom of crown -->
+  <text x="148" y="365" font-size="28" fill="#14532d" text-anchor="middle">♠</text>
+  <text x="210" y="365" font-size="28" fill="#dc2626" text-anchor="middle">♥</text>
+  <text x="302" y="365" font-size="28" fill="#dc2626" text-anchor="middle">♦</text>
+  <text x="364" y="365" font-size="28" fill="#14532d" text-anchor="middle">♣</text>
+</svg>
