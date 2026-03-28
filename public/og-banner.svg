@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#14532d"/>
+  <!-- Crown -->
+  <path d="M500 380 L500 260 L565 320 L630 230 L695 320 L760 260 L760 380 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="5"/>
+  <rect x="482" y="370" width="296" height="45" rx="10" fill="#fbbf24" stroke="#f59e0b" stroke-width="5"/>
+  <circle cx="565" cy="315" r="14" fill="#ef4444"/>
+  <circle cx="630" cy="292" r="16" fill="#3b82f6"/>
+  <circle cx="695" cy="315" r="14" fill="#ef4444"/>
+  <!-- Title text -->
+  <text x="600" y="500" font-family="Georgia, serif" font-size="80" font-weight="bold" fill="#fbbf24" text-anchor="middle">Palace Royale</text>
+  <text x="600" y="560" font-family="Georgia, serif" font-size="36" fill="#86efac" text-anchor="middle">♠ The Ultimate Card Game ♥</text>
+</svg>
