@@ -228,7 +228,7 @@ There are currently **no automated tests**. When making changes to `game-engine.
 
 ### Current Feature Branch
 
-Active development branch: `claude/add-claude-documentation-sU0VC`
+Active development branch: `claude/combine-prs-deployment-fix-RwRXX`
 
 ---
 
@@ -236,8 +236,25 @@ Active development branch: `claude/add-claude-documentation-sU0VC`
 
 - **Platform**: Vercel (automatic deploys from `main`)
 - **Build command**: `npm run build` → `dist/`
+- **Output directory**: `dist/`
 - **SPA routing**: `vercel.json` rewrites all paths to `/index.html`
 - **Backend**: Supabase Edge Functions (deployed separately via Supabase CLI)
+
+### Critical Vercel Config
+
+`vercel.json` must include `"framework": null` to prevent Vercel from auto-detecting this as a Next.js project (triggered by the `next-themes` dependency). Without it, Vercel uses the Next.js builder and fails with "No Next.js version detected".
+
+`react` and `react-dom` must be in `dependencies` (not `peerDependencies`) so Vercel CI installs them. See `package.json`.
+
+If a Vercel build fails with "No Next.js version detected", verify `vercel.json` has:
+```json
+{
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install"
+}
+```
 
 ---
 
