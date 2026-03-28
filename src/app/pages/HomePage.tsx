@@ -130,7 +130,7 @@ export default function HomePage() {
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
     if (multiAction === 'create') {
-      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount } });
+      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount, deckCount } });
     } else {
       if (!gameCode.trim()) return;
       navigate('/lobby', { state: { action: 'join', playerName: playerName.trim(), playerEmoji, code: gameCode.trim().toUpperCase() } });
