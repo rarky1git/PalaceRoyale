@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import { PalaceSlot, Card } from '../game-engine';
 import { PlayingCard } from './PlayingCard';
 
@@ -16,6 +17,7 @@ interface PalaceDisplayProps {
   centered?: boolean;
   showRotation?: boolean;
   playableCardIds?: string[];
+  isValidReveal?: boolean;
 }
 
 // Deterministic rotation per slot index
@@ -39,12 +41,17 @@ export function PalaceDisplay({
   centered,
   showRotation,
   playableCardIds,
+  isValidReveal,
 }: PalaceDisplayProps) {
   // True when every slot has lost its face-up card
   const allFaceUpGone = palace.every(slot => !slot.faceUp);
 
   return (
-    <div className={`flex flex-col gap-3.5 ${centered ? 'items-center' : 'items-left'}`}>
+    <motion.div
+      className={`flex flex-col gap-3.5 rounded-lg ${centered ? 'items-center' : 'items-start'}`}
+      animate={isValidReveal ? { boxShadow: ['0 0 0 0px #22c55e', '0 0 16px 4px #22c55e', '0 0 0 0px #22c55e'] } : {}}
+      transition={{ duration: 0.8 }}
+    >
       {playerName && (
         <div className="flex items-center gap-1">
           <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} font-bold text-gray-200 truncate max-w-32`}>
@@ -103,6 +110,6 @@ export function PalaceDisplay({
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 }
