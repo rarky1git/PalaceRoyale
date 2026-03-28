@@ -101,6 +101,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [miniOpponents, setMiniOpponents] = useState(false);
   const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
   const [palaceValidFlash, setPalaceValidFlash] = useState<string | null>(null);
+  const [turnFlash, setTurnFlash] = useState(false);
   const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
@@ -213,6 +214,14 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     }
     prevNudgeCountRef.current = newNudgeCount;
   }, [gameState.nudgeCount, gameState.version, isMyTurn, isPlaying]);
+
+  // Beginner mode: flash yellow when it becomes the human player's turn
+  useEffect(() => {
+    if (!settings.beginnerMode || !isMyTurn || !isPlaying) return;
+    setTurnFlash(true);
+    const t = setTimeout(() => setTurnFlash(false), 600);
+    return () => clearTimeout(t);
+  }, [isMyTurn, isPlaying, settings.beginnerMode]);
 
   // AI turns for robot mode
   useEffect(() => {
@@ -496,6 +505,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
+      {/* Beginner mode: yellow flash overlay on player's turn */}
+      <motion.div
+        className="absolute inset-0 z-10 pointer-events-none bg-yellow-300"
+        animate={{ opacity: turnFlash ? 0.3 : 0 }}
+        transition={{ duration: 0.5 }}
+      />
       {/* Emoji waterfall — background layer, behind all game components */}
       <AnimatePresence>
         {(animEffect === 'wipeout' || animEffect === 'slam' || animEffect === 'sparkle') && animEmoji && (
