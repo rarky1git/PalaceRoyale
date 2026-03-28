@@ -89,6 +89,38 @@ export function cardValue(rank: number): number {
 export const MAX_DECKS = 3;
 export const MAX_PLAYERS_PER_DECK = 5;
 
+// ---- Bot Profiles ----
+
+export interface BotProfile {
+  name: string;
+  emoji: string;
+  thinkDelayMin: number;   // ms — minimum thinking time before acting
+  thinkDelayMax: number;   // ms — maximum thinking time before acting
+  counterChance: number;   // 0–1: probability of attempting a counter
+  saveSpecials: boolean;   // if true, hoard 2s and 10s for later; if false, use freely
+  preferHighCards: boolean; // if true, play highest valid cards first
+  riskTolerance: number;   // 0–1: willingness to gamble (e.g. Henry's chaos)
+}
+
+export const BOT_PROFILES: BotProfile[] = [
+  { name: 'Arthur',  emoji: '⚔️',  thinkDelayMin: 800,  thinkDelayMax: 1800, counterChance: 0.5, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.5 },
+  { name: 'James',   emoji: '🏇',  thinkDelayMin: 500,  thinkDelayMax: 1200, counterChance: 0.7, saveSpecials: false, preferHighCards: true,  riskTolerance: 0.8 },
+  { name: 'Francis', emoji: '🧙',  thinkDelayMin: 1200, thinkDelayMax: 2500, counterChance: 0.3, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.2 },
+  { name: 'Edward',  emoji: '🛡️',  thinkDelayMin: 900,  thinkDelayMax: 1600, counterChance: 0.9, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.4 },
+  { name: 'Henry',   emoji: '🎲',  thinkDelayMin: 600,  thinkDelayMax: 2000, counterChance: 0.5, saveSpecials: false, preferHighCards: false, riskTolerance: 0.9 },
+  { name: 'Richard', emoji: '🦌',  thinkDelayMin: 1500, thinkDelayMax: 3000, counterChance: 0.4, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.2 },
+  { name: 'William', emoji: '🗡️',  thinkDelayMin: 700,  thinkDelayMax: 1400, counterChance: 0.6, saveSpecials: false, preferHighCards: false, riskTolerance: 0.7 },
+  { name: 'Thomas',  emoji: '🧭',  thinkDelayMin: 2000, thinkDelayMax: 4000, counterChance: 0.4, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.3 },
+];
+
+export function getBotProfile(name: string): BotProfile | undefined {
+  return BOT_PROFILES.find(p => p.name === name);
+}
+
+export function getRandomBotDelay(profile: BotProfile): number {
+  return Math.floor(profile.thinkDelayMin + Math.random() * (profile.thinkDelayMax - profile.thinkDelayMin));
+}
+
 export function createDeck(deckIndex: number = 0): Card[] {
   const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
   const cards: Card[] = [];
