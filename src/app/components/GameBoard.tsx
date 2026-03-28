@@ -669,6 +669,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
               isSetup={isSetup}
               isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
+              eliminated={gameState.eliminated || []}
               mini={miniOpponents}
               isBeforePlayer
             />
@@ -864,6 +865,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               centered={palaceIsActive}
               showRotation
               playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
+              isValidReveal={palaceValidFlash === myPlayerId}
             />
           </div>
         )}
@@ -1041,8 +1043,8 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBeforePlayer, isAfterPlayer }: {
-  player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; mini?: boolean;
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer }: {
+  player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
   isBeforePlayer?: boolean; isAfterPlayer?: boolean;
 }) {
   return (
@@ -1065,7 +1067,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
           <div className="flex items-center gap-1 flex-wrap justify-center">
             {isEliminated ? (
-              <span className="text-[10px] text-green-300">Safe!</span>
+              <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
               <>
                 {formatStatsText(player.stats) && (
