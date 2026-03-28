@@ -15,6 +15,7 @@ import {
   setPlayerStats, computeGameRankings,
   revealFaceDownCards,
   resetGame, requestNewGame,
+  getBotProfile, getRandomBotDelay,
 } from '../game-engine';
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
@@ -194,20 +195,29 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     if (isMultiplayer || !isPlaying) return;
     if (isMyTurn) return;
 
+    // Get current player's bot profile for variable timing
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    const botProfile = getBotProfile(currentPlayer.name);
+    const aiDelay = botProfile
+      ? getRandomBotDelay(botProfile)
+      : Math.floor(800 + Math.random() * 800); // fallback: 800–1600ms random
+
     const timer = setTimeout(() => {
       try {
-        // Handle pending counter for AI
         if (gameState.pendingCounter) {
-          const newState = aiHandleCounter(gameState);
+          // Profile of the player who needs to handle the counter
+          const counterPlayer = gameState.players[gameState.currentPlayerIndex];
+          const counterProfile = getBotProfile(counterPlayer.name);
+          const newState = aiHandleCounter(gameState, counterProfile);
           onStateChange(newState);
           return;
         }
         const stealState = checkAISteal(gameState);
         if (stealState) { onStateChange(stealState); return; }
-        const newState = aiPlayTurn(gameState);
+        const newState = aiPlayTurn(gameState, botProfile);
         onStateChange(newState);
       } catch (e) { console.log('AI error:', e); }
-    }, 1200);
+    }, aiDelay);
     return () => clearTimeout(timer);
   }, [gameState.version, isMyTurn, isPlaying, isMultiplayer]);
 
@@ -218,7 +228,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       let s = deepClone(gameState);
       for (const p of s.players) {
         if (p.id === myPlayerId) continue;
-        if (p.setupPhase !== 'done') s = aiSetup(s, p.id);
+        if (p.setupPhase !== 'done') {
+          const p2Profile = getBotProfile(p.name);
+          s = aiSetup(s, p.id, p2Profile);
+        }
       }
       if (s.version !== gameState.version) onStateChange(s);
     }, 800);
