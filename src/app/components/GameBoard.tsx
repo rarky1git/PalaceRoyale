@@ -1312,7 +1312,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
         </span>
       ) : (
         <>
-          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
+          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} showRotation />
           <div className="flex items-center gap-1 flex-wrap justify-center">
             {isEliminated ? (
               <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
