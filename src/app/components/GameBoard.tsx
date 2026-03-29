@@ -22,6 +22,7 @@ import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
 import { useSettings } from '../contexts/SettingsContext';
+import { TutorialOverlay, TUTORIAL_STEPS, TUTORIAL_SEEN_KEY } from './TutorialOverlay';
 
 // Seeded random per card ID for consistent rotations
 const DEFAULT_EMOJI = '🦆';
@@ -83,14 +84,17 @@ interface GameBoardProps {
   onStateChange: (state: GameState) => void;
   isMultiplayer?: boolean;
   playerEmoji?: string; // Local player's chosen emoji (for multiplayer emoji sync)
+  tutorialMode?: boolean; // When true, show step-by-step tutorial overlay
 }
 
-export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji }: GameBoardProps) {
+export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji, tutorialMode = false }: GameBoardProps) {
   const navigate = useNavigate();
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  // Tutorial step: 0 = hidden, 1..N = active step
+  const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
@@ -156,7 +160,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3000);
         }
       }
-      if (action?.type === 'palace-invalid' && action.cards?.[0]) {
+      if (settings.particleEffects && action?.type === 'palace-invalid' && action.cards?.[0]) {
         const playerName = gameState.players.find(p => p.id === action.playerId)?.name ?? '';
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
@@ -183,6 +187,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
   // Detect valid palace face-down reveal and trigger palace-valid animEffect
   useEffect(() => {
+    if (!settings.particleEffects) return;
     if (gameState.lastAction?.type !== 'play') return;
     const actingPlayer = gameState.players.find(p => p.id === gameState.lastAction?.playerId);
     if (!actingPlayer) return;
@@ -205,7 +210,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       }, 1500);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.lastAction, gameState.version]);
+  }, [gameState.lastAction, gameState.version, settings.particleEffects]);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -542,6 +547,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   // Pile cards for display (show up to 5 beneath top card)
   const pileCards = gameState.pickupPile.slice(-6);
 
+  // Tutorial handlers
+  const totalTutorialSteps = TUTORIAL_STEPS.length;
+  const handleTutorialNext = () => {
+    if (tutorialStep >= totalTutorialSteps) {
+      // Tutorial complete
+      try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* ignore */ }
+      setTutorialStep(0);
+    } else {
+      setTutorialStep(s => s + 1);
+    }
+  };
+  const handleTutorialSkip = () => {
+    // Skip/dismiss mid-tutorial also marks as seen
+    try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* ignore */ }
+    setTutorialStep(0);
+  };
+
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
       {/* Beginner mode: yellow flash overlay on player's turn */}
@@ -550,6 +572,16 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         animate={{ opacity: turnFlash ? 0.3 : 0 }}
         transition={{ duration: 0.5 }}
       />
+      {/* Tutorial overlay — shown during guided tutorial mode */}
+      {tutorialMode && tutorialStep > 0 && (
+        <TutorialOverlay
+          step={tutorialStep}
+          totalSteps={totalTutorialSteps}
+          onNext={handleTutorialNext}
+          onSkip={handleTutorialSkip}
+        />
+      )}
+
       {/* Emoji waterfall — background layer, behind all game components */}
       <AnimatePresence>
         {(animEffect === 'wipeout' || animEffect === 'slam' || animEffect === 'sparkle') && animEmoji && (
@@ -752,8 +784,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
-      {/* Chat View — floating opponent overlay (multiplayer only) */}
-      {isMultiplayer && isPlaying && chatMode && chatOpponent && (
+      {/* Chat View — floating opponent overlay */}
+      {isPlaying && chatMode && chatOpponent && (
         <div
           className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} w-32 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
           style={{ maxWidth: 'calc(50% - 1rem)' }}
@@ -817,7 +849,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
       {/* Opponents area — hidden when chat mode is active */}
       <div
-        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${isMultiplayer && chatMode ? 'hidden' : ''}`}
+        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${chatMode ? 'hidden' : ''}`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {prevOpponent && (
@@ -1049,8 +1081,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
-      {/* Chat View toggle — shown above My area in multiplayer during play */}
-      {isMultiplayer && isPlaying && (
+      {/* Chat View toggle — shown above My area during play */}
+      {isPlaying && (
         <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
           <button
             onClick={() => setChatMode(v => !v)}
@@ -1101,29 +1133,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
         {/* My Hand / Setup Cards - 2-row grid */}
         <div className="flex flex-col items-center gap-1 overflow-visible">
-          {/* Hand label row */}
-          <div className="flex items-center justify-between w-full px-1">
-            <div className="w-7" />
-            <div className="flex-1 flex justify-center">
-              {isPlaying && source === 'hand' ? (
-                <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                  Hand ({me.hand.length})
-                </span>
-              ) : (
+          {/* Setup label row (only shown during setup phase) */}
+          {isSetup && (
+            <div className="flex items-center justify-between w-full px-1">
+              <div className="w-7" />
+              <div className="flex-1 flex justify-center">
                 <span className="text-[10px] text-green-300 font-medium">
-                  {isSetup
-                    ? me.setupPhase === 'select-facedown'
-                      ? 'Your 9 cards (pick 3 blindly)'
-                      : me.setupPhase === 'select-faceup'
-                      ? 'Pick 3 for palace face-up'
-                      : 'Setup complete'
-                    : `Hand (${me.hand.length})`}
+                  {me.setupPhase === 'select-facedown'
+                    ? 'Your 9 cards (pick 3 blindly)'
+                    : me.setupPhase === 'select-faceup'
+                    ? 'Pick 3 for palace face-up'
+                    : 'Setup complete'}
                 </span>
-              )}
+              </div>
+              {/* Spacer to balance the layout */}
+              <div className="w-7" />
             </div>
-            {/* Spacer to balance the layout */}
-            <div className="w-7" />
-          </div>
+          )}
           {isPlaying && source !== 'hand' && me.hand.length === 0 && (
             <span className="text-green-400 text-xs italic py-1">
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
@@ -1131,7 +1157,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           )}
           <div className="overflow-visible w-full">
             <div
-              className="grid gap-1 pt-4 pb-2 mx-auto"
+              className="grid gap-1 pt-4 pb-0.5 mx-auto"
               style={{
                 gridAutoFlow: 'row',
                 gridTemplateRows: useDoubleRow ? 'repeat(2, auto)' : 'auto',
@@ -1181,6 +1207,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             </div>
           </div>
         </div>
+
+        {/* Hand count chip - below hand cards, above action buttons */}
+        {isPlaying && source === 'hand' && (
+          <div className="flex justify-center">
+            <span className="bg-white/15 text-green-200 px-2 py-px rounded-full text-[10px] font-medium">
+              Hand ({me.hand.length})
+            </span>
+          </div>
+        )}
 
         {/* Action buttons - below hand */}
         {isPlaying && !isFinished && !isEliminated && (
@@ -1296,14 +1331,14 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
 }) {
   return (
-    <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
+    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
       isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
       isBeforePlayer ? 'bg-purple-500/20' :
       isAfterPlayer ? 'bg-green-500/20' :
       'bg-black/10'
     }`}>
-      <span className="text-[10px] font-bold truncate max-w-26">
+      <span className="text-[10px] font-bold truncate max-w-26 mb-1">
         {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
       {isSetup ? (
@@ -1313,9 +1348,9 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
       ) : (
         <>
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
-          <div className="flex items-center gap-1 flex-wrap justify-center">
+          <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
             {isEliminated ? (
-              <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
+              <span className="text-[9px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
               <>
                 {formatStatsText(player.stats) && (
