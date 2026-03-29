@@ -1296,7 +1296,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
 }) {
   return (
-    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-1 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
+    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-3 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
       isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
       isBeforePlayer ? 'bg-purple-500/20' :
