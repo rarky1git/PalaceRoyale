@@ -523,7 +523,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     : null;
   // The player who acted just before the current player (for "last played" info below chat view)
   const prevPlayerIndex = (gameState.currentPlayerIndex - 1 + totalPlayers) % totalPlayers;
-  const lastPlayedPlayer = totalPlayers > 1 ? gameState.players[prevPlayerIndex] : null;
+  const lastActionPlayerId = gameState.lastAction?.playerId;
+  const lastPlayedPlayer =
+    lastActionPlayerId != null
+      ? gameState.players.find(p => p.id === lastActionPlayerId) ??
+        (totalPlayers > 1 ? gameState.players[prevPlayerIndex] : null)
+      : (totalPlayers > 1 ? gameState.players[prevPlayerIndex] : null);
   // Whether the chat opponent is playing from their palace (hand empty + draw pile empty)
   const chatOpponentInPalace = chatOpponent
     ? chatOpponent.hand.length === 0 && gameState.drawPile.length === 0
