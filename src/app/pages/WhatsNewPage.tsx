@@ -96,22 +96,6 @@ function BotRosterMockup() {
   );
 }
 
-/** Card hierarchy mockup matching new playing-card style */
-function CardHierarchyMockup() {
-  const ranks = [
-    { r: '3', bg: 'bg-white' }, { r: '7', bg: 'bg-orange-200' },
-    { r: '10', bg: 'bg-red-200' }, { r: 'A', bg: 'bg-white' }, { r: '2', bg: 'bg-blue-200' },
-  ];
-  return (
-    <div className="flex gap-1.5 items-end">
-      {ranks.map(({ r, bg }) => (
-        <MiniCard key={r} rank={r} bg={bg} />
-      ))}
-      <span className="text-[10px] text-green-400 self-center ml-1">← click any card</span>
-    </div>
-  );
-}
-
 /** Special card color chips mockup */
 function SpecialCardsMockup() {
   return (
@@ -191,7 +175,7 @@ export default function WhatsNewPage() {
             <span className="text-lg">🚀</span> Palace Royale v{APP_VERSION}
           </div>
           <p className="text-sm text-yellow-100 leading-relaxed">
-            This release brings <strong>knight-named AI bots</strong>, a <strong>beginner mode</strong>, interactive How to Play, palace animations, and a stack of quality-of-life improvements.
+            This release brings <strong>knight-named AI bots</strong>, a <strong>beginner mode</strong>, palace animations, and a stack of quality-of-life improvements.
           </p>
         </div>
 
@@ -240,12 +224,6 @@ export default function WhatsNewPage() {
         <FeatureSection emoji="🏆" title="Ranked Safe Display">
           <p>Players who finish safely are now ranked in order of elimination — <strong className="text-yellow-300">🥇 Gold!</strong> / <strong className="text-gray-300">🥈 Silver!</strong> / <strong className="text-orange-300">🥉 Bronze!</strong> — instead of the generic "Safe!" label.</p>
           <SafeRankingMockup />
-        </FeatureSection>
-
-        {/* 6. Interactive How to Play */}
-        <FeatureSection emoji="📖" title="Interactive How to Play">
-          <p>The <strong className="text-white">Card Hierarchy</strong> section now uses actual playing-card buttons. Click any rank to read its rule. Special cards display their beginner-mode colors.</p>
-          <CardHierarchyMockup />
         </FeatureSection>
 
         {/* 7. Deck count for robot games */}
