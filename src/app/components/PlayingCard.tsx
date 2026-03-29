@@ -8,14 +8,15 @@ interface PlayingCardProps {
   onClick?: () => void;
   small?: boolean;
   mini?: boolean;
+  xsmall?: boolean;
   disabled?: boolean;
   highlight?: boolean;
 }
 
-export function PlayingCard({ card, faceDown, selected, onClick, small, mini, disabled, highlight }: PlayingCardProps) {
+export function PlayingCard({ card, faceDown, selected, onClick, small, mini, xsmall, disabled, highlight }: PlayingCardProps) {
   const { settings } = useSettings();
-  const w = mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18';
-  const textSize = mini ? 'text-[8px]' : small ? 'text-xs' : 'text-[11px]';
+  const w = mini ? 'w-8 h-11' : xsmall ? 'w-9 h-[52px]' : small ? 'w-14 h-20' : 'w-10 h-[60px]';
+  const textSize = mini ? 'text-[8px]' : xsmall ? 'text-[10px]' : small ? 'text-xs' : 'text-[11px]';
 
   if (!card || faceDown) {
     return (
@@ -28,7 +29,7 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
           ${onClick && !disabled ? 'hover:brightness-110 active:scale-95' : ''}
           transition-all shrink-0`}
       >
-        <span className={`text-white ${mini ? 'text-xs' : 'text-lg'} font-bold`}>♠</span>
+        <span className={`text-white ${mini ? 'text-xs' : xsmall ? 'text-base' : 'text-lg'} font-bold`}>♠</span>
       </button>
     );
   }
@@ -79,7 +80,7 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
       <div className={`${textSize} font-bold leading-none ${isRed ? 'text-red-600' : 'text-gray-900'}`}>
         {getRankDisplay(card.rank)}
       </div>
-      <div className={`self-center ${small ? 'text-base' : 'text-xl'} ${isRed ? 'text-red-600' : 'text-gray-900'}`}>
+      <div className={`self-center ${small ? 'text-base' : xsmall ? 'text-lg' : 'text-xl'} ${isRed ? 'text-red-600' : 'text-gray-900'}`}>
         {getSuitSymbol(card.suit)}
       </div>
       <div className={`${textSize} font-bold leading-none self-end rotate-180 ${isRed ? 'text-red-600' : 'text-gray-900'}`}>

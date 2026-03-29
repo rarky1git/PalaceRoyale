@@ -80,13 +80,13 @@ export function PalaceDisplay({
                       disabled={canPlayFaceUp && !isFaceUpPlayable}
                     />
                   ) : (
-                    <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200/20`} />
+                    <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-10 h-[60px]'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200/20`} />
                   )}
                 </div>
               )}
               {/* Face down card — when all face-ups gone, sits on top with no negative offset */}
               <div
-                className={`flex gap-2 -mr-[.5em] ${allFaceUpGone ? '' : mini ? '-mb-[3em]' : '-mb-[5em]'}`}
+                className={`flex gap-2 -mr-[.5em] ${allFaceUpGone ? '' : mini ? '-mb-[3em]' : small ? '-mb-[5em]' : '-mb-[3.75em]'}`}
                 style={showRotation && slot.faceDown ? { transform: `rotate(${faceDownRot}deg)` } : undefined}
               >
                 {slot.faceDown ? (
@@ -98,7 +98,7 @@ export function PalaceDisplay({
                     highlight={isCurrentPlayer && canPlayFaceDown && !slot.faceUp}
                   />
                 ) : (
-                  <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200`} />
+                  <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-10 h-[60px]'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200`} />
                 )}
               </div>
             </div>
