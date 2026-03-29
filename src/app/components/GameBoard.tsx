@@ -156,7 +156,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3000);
         }
       }
-      if (action?.type === 'palace-invalid' && action.cards?.[0]) {
+      if (settings.particleEffects && action?.type === 'palace-invalid' && action.cards?.[0]) {
         const playerName = gameState.players.find(p => p.id === action.playerId)?.name ?? '';
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
@@ -183,6 +183,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
   // Detect valid palace face-down reveal and trigger palace-valid animEffect
   useEffect(() => {
+    if (!settings.particleEffects) return;
     if (gameState.lastAction?.type !== 'play') return;
     const actingPlayer = gameState.players.find(p => p.id === gameState.lastAction?.playerId);
     if (!actingPlayer) return;
@@ -205,7 +206,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       }, 1500);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.lastAction, gameState.version]);
+  }, [gameState.lastAction, gameState.version, settings.particleEffects]);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -1101,29 +1102,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
         {/* My Hand / Setup Cards - 2-row grid */}
         <div className="flex flex-col items-center gap-1 overflow-visible">
-          {/* Hand label row */}
-          <div className="flex items-center justify-between w-full px-1">
-            <div className="w-7" />
-            <div className="flex-1 flex justify-center">
-              {isPlaying && source === 'hand' ? (
-                <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                  Hand ({me.hand.length})
-                </span>
-              ) : (
+          {/* Setup label row (only shown during setup phase) */}
+          {isSetup && (
+            <div className="flex items-center justify-between w-full px-1">
+              <div className="w-7" />
+              <div className="flex-1 flex justify-center">
                 <span className="text-[10px] text-green-300 font-medium">
-                  {isSetup
-                    ? me.setupPhase === 'select-facedown'
-                      ? 'Your 9 cards (pick 3 blindly)'
-                      : me.setupPhase === 'select-faceup'
-                      ? 'Pick 3 for palace face-up'
-                      : 'Setup complete'
-                    : `Hand (${me.hand.length})`}
+                  {me.setupPhase === 'select-facedown'
+                    ? 'Your 9 cards (pick 3 blindly)'
+                    : me.setupPhase === 'select-faceup'
+                    ? 'Pick 3 for palace face-up'
+                    : 'Setup complete'}
                 </span>
-              )}
+              </div>
+              {/* Spacer to balance the layout */}
+              <div className="w-7" />
             </div>
-            {/* Spacer to balance the layout */}
-            <div className="w-7" />
-          </div>
+          )}
           {isPlaying && source !== 'hand' && me.hand.length === 0 && (
             <span className="text-green-400 text-xs italic py-1">
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
@@ -1181,6 +1176,15 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             </div>
           </div>
         </div>
+
+        {/* Hand count chip - below hand cards, above action buttons */}
+        {isPlaying && source === 'hand' && (
+          <div className="flex justify-center">
+            <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
+              Hand ({me.hand.length})
+            </span>
+          </div>
+        )}
 
         {/* Action buttons - below hand */}
         {isPlaying && !isFinished && !isEliminated && (
