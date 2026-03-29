@@ -1296,14 +1296,14 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
 }) {
   return (
-    <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
+    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
       isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
       isBeforePlayer ? 'bg-purple-500/20' :
       isAfterPlayer ? 'bg-green-500/20' :
       'bg-black/10'
     }`}>
-      <span className="text-[10px] font-bold truncate max-w-26">
+      <span className="text-[10px] font-bold truncate max-w-26 mb-1">
         {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
       {isSetup ? (
@@ -1312,10 +1312,10 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
         </span>
       ) : (
         <>
-          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} showRotation />
-          <div className="flex items-center gap-1 flex-wrap justify-center">
+          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
+          <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
             {isEliminated ? (
-              <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
+              <span className="text-[9px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
               <>
                 {formatStatsText(player.stats) && (
