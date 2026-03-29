@@ -101,7 +101,9 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [playerCount, setPlayerCount] = useState(2);
   const [deckCount, setDeckCount] = useState(1);
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(() => {
+    try { return localStorage.getItem('palace-player-name') || ''; } catch { return ''; }
+  });
   const [playerEmoji, setPlayerEmoji] = useState(() => {
     try { return localStorage.getItem('palace-player-emoji') || '🦆'; } catch { return '🦆'; }
   });
@@ -216,6 +218,7 @@ export default function HomePage() {
 
   const startRobot = () => {
     if (!playerName.trim()) return;
+    try { localStorage.setItem('palace-player-name', playerName.trim()); } catch { /* ignore */ }
     const names = [playerName.trim()];
     const emojis = [playerEmoji];
 
@@ -231,6 +234,7 @@ export default function HomePage() {
 
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
+    try { localStorage.setItem('palace-player-name', playerName.trim()); } catch { /* ignore */ }
     if (multiAction === 'create') {
       navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount, deckCount } });
     } else {
