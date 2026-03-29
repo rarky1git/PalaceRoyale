@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb, History } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { GameSettings } from '../contexts/SettingsContext';
 
@@ -143,6 +143,22 @@ export const SettingsPage: React.FC = () => {
             </div>
           );
         })}
+
+        {/* Version History link */}
+        <div>
+          <h2 className="text-xs uppercase tracking-widest text-green-400 mb-2 pl-1">About</h2>
+          <button
+            onClick={() => navigate('/version-log')}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
+          >
+            <History className="w-5 h-5 text-green-400" />
+            <div className="text-left flex-1">
+              <div className="font-semibold text-sm text-green-300">Version History</div>
+              <div className="text-xs text-green-400">See all past releases</div>
+            </div>
+            <span className="text-green-500 text-sm">→</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { Video, AlignLeft, AlignRight } from 'lucide-react';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
@@ -103,6 +104,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [miniOpponents, setMiniOpponents] = useState(false);
   const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
   const [turnFlash, setTurnFlash] = useState(false);
+  // Chat View (floating opponent overlay) — multiplayer only
+  const [chatMode, setChatMode] = useState(false);
+  const [chatAlign, setChatAlign] = useState<'right' | 'left'>('right');
   const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
@@ -511,6 +515,20 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   ];
   const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
 
+  // Chat View: the active opponent whose turn it is (skip local player)
+  const chatOpponent = isPlaying
+    ? (currentPlayer && currentPlayer.id !== myPlayerId
+        ? currentPlayer
+        : opponents[0] ?? null)
+    : null;
+  // The player who acted just before the current player (for "last played" info below chat view)
+  const prevPlayerIndex = (gameState.currentPlayerIndex - 1 + totalPlayers) % totalPlayers;
+  const lastPlayedPlayer = totalPlayers > 1 ? gameState.players[prevPlayerIndex] : null;
+  // Whether the chat opponent is playing from their palace (hand empty + draw pile empty)
+  const chatOpponentInPalace = chatOpponent
+    ? chatOpponent.hand.length === 0 && gameState.drawPile.length === 0
+    : false;
+
   // Hand grid: fill rows first; 1 row for ≤6 cards, 2 rows for more (scroll horizontally)
   const displayCardCount = isSetup ? me.setupCards.length : sortedHand.length;
   const useDoubleRow = displayCardCount > 6;
@@ -728,6 +746,66 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
+
+      {/* Chat View — floating opponent overlay (multiplayer only) */}
+      {isMultiplayer && isPlaying && chatMode && chatOpponent && (
+        <div
+          className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} w-32 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
+          style={{ maxWidth: 'calc(50% - 1rem)' }}
+        >
+          {/* Opponent info */}
+          <div className="flex items-center gap-1.5 px-2 pt-2 pb-1">
+            <span className="text-base leading-none">{chatOpponent.emoji || DEFAULT_EMOJI}</span>
+            <span className={`text-[10px] font-bold truncate flex-1 ${
+              (gameState.eliminated || []).includes(chatOpponent.id) ? 'text-green-300' :
+              currentPlayer?.id === chatOpponent.id ? 'text-yellow-300' : 'text-white'
+            }`}>
+              {chatOpponent.name}
+              {currentPlayer?.id === chatOpponent.id ? ' ⭐' : ''}
+              {(gameState.eliminated || []).includes(chatOpponent.id) ? ' ✅' : ''}
+            </span>
+          </div>
+
+          {/* Palace (only when in palace phase) or hand count */}
+          <div className="px-2 pb-1">
+            {chatOpponentInPalace ? (
+              <PalaceDisplay palace={chatOpponent.palace} mini />
+            ) : (
+              <span className="bg-white/20 text-green-100 px-1.5 py-0.5 rounded-full text-[9px] font-medium">
+                Hand: {chatOpponent.hand.length}
+              </span>
+            )}
+          </div>
+
+          {/* Last played info */}
+          {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (
+            <div className="border-t border-white/10 px-2 py-1">
+              <div className="text-[8px] text-green-400 leading-tight">Last played:</div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
+                <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
+              </div>
+              {formatStatsText(lastPlayedPlayer.stats) && (
+                <div className="text-[8px] text-yellow-300 mt-0.5">{formatStatsText(lastPlayedPlayer.stats)}</div>
+              )}
+            </div>
+          )}
+
+          {/* Align toggle */}
+          <div className="flex justify-end px-1.5 pb-1.5">
+            <button
+              onClick={() => setChatAlign(a => a === 'right' ? 'left' : 'right')}
+              className="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 active:scale-90 transition-all"
+              title={`Move to ${chatAlign === 'right' ? 'left' : 'right'}`}
+            >
+              {chatAlign === 'right'
+                ? <AlignLeft className="w-3 h-3 text-green-300" />
+                : <AlignRight className="w-3 h-3 text-green-300" />
+              }
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Opponents area */}
       <div
@@ -1000,21 +1078,41 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
         {/* My Hand / Setup Cards - 2-row grid */}
         <div className="flex flex-col items-center gap-1 overflow-visible">
-          {isPlaying && source === 'hand' ? (
-            <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
-              Hand ({me.hand.length})
-            </span>
-          ) : (
-            <span className="text-[10px] text-green-300 font-medium">
-              {isSetup
-                ? me.setupPhase === 'select-facedown'
-                  ? 'Your 9 cards (pick 3 blindly)'
-                  : me.setupPhase === 'select-faceup'
-                  ? 'Pick 3 for palace face-up'
-                  : 'Setup complete'
-                : `Hand (${me.hand.length})`}
-            </span>
-          )}
+          {/* Hand label row — includes Chat View toggle for multiplayer */}
+          <div className="flex items-center justify-between w-full px-1">
+            {isMultiplayer && isPlaying ? (
+              <button
+                onClick={() => setChatMode(v => !v)}
+                title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+                  chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+                }`}
+              >
+                <Video className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="w-7" />
+            )}
+            <div className="flex-1 flex justify-center">
+              {isPlaying && source === 'hand' ? (
+                <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
+                  Hand ({me.hand.length})
+                </span>
+              ) : (
+                <span className="text-[10px] text-green-300 font-medium">
+                  {isSetup
+                    ? me.setupPhase === 'select-facedown'
+                      ? 'Your 9 cards (pick 3 blindly)'
+                      : me.setupPhase === 'select-faceup'
+                      ? 'Pick 3 for palace face-up'
+                      : 'Setup complete'
+                    : `Hand (${me.hand.length})`}
+                </span>
+              )}
+            </div>
+            {/* Spacer to balance the layout */}
+            <div className="w-7" />
+          </div>
           {isPlaying && source !== 'hand' && me.hand.length === 0 && (
             <span className="text-green-400 text-xs italic py-1">
               {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}

@@ -7,6 +7,7 @@ import HowToPlayPage from './pages/HowToPlayPage';
 import SettingsPage from './pages/SettingsPage';
 import RejoinGamesPage from './pages/RejoinGamesPage';
 import WhatsNewPage from './pages/WhatsNewPage';
+import VersionLogPage from './pages/VersionLogPage';
 
 export const router = createBrowserRouter([
   { path: '/', Component: HomePage },
@@ -17,4 +18,5 @@ export const router = createBrowserRouter([
   { path: '/settings', Component: SettingsPage },
   { path: '/rejoin-games', Component: RejoinGamesPage },
   { path: '/whats-new', Component: WhatsNewPage },
+  { path: '/version-log', Component: VersionLogPage },
 ]);
