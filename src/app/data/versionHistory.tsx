@@ -165,8 +165,8 @@ function ChatViewMockup() {
           ))}
         </div>
         <div className="text-[8px] text-green-300 text-center">Palace</div>
-        {/* Align toggle */}
-        <button className="self-end text-[8px] text-white/50">◀</button>
+        {/* Align toggle (visual only, non-interactive) */}
+        <div className="self-end text-[8px] text-white/50">◀</div>
       </div>
       {/* Last played info */}
       <div className="absolute bottom-1 right-2 text-[7px] text-green-400 bg-black/60 rounded px-1 py-0.5">
