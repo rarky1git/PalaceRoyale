@@ -11,6 +11,7 @@ interface PalaceDisplayProps {
   onFaceDownClick?: (slotIndex: number) => void;
   small?: boolean;
   mini?: boolean;
+  xsmall?: boolean;
   playerName?: string;
   statsText?: string; // Short stats string shown next to player name (e.g. "🥇2 🥈1")
   centered?: boolean;
@@ -34,6 +35,7 @@ export function PalaceDisplay({
   onFaceDownClick,
   small,
   mini,
+  xsmall,
   playerName,
   statsText,
   centered,
@@ -49,11 +51,11 @@ export function PalaceDisplay({
     >
       {playerName && (
         <div className="flex items-center gap-1">
-          <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} font-bold text-gray-200 truncate max-w-32`}>
+          <span className={`${small || mini || xsmall ? 'text-[10px]' : 'text-xs'} font-bold text-gray-200 truncate max-w-32`}>
             {playerName}
           </span>
           {statsText && (
-            <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} text-yellow-300 shrink-0`}>
+            <span className={`${small || mini || xsmall ? 'text-[10px]' : 'text-xs'} text-yellow-300 shrink-0`}>
               {statsText}
             </span>
           )}
@@ -74,19 +76,20 @@ export function PalaceDisplay({
                       card={slot.faceUp}
                       small={small}
                       mini={mini}
+                      xsmall={xsmall}
                       selected={selectedCards.includes(slot.faceUp.id)}
                       onClick={isCurrentPlayer && canPlayFaceUp && isFaceUpPlayable ? () => onCardClick?.(slot.faceUp!) : undefined}
                       highlight={isCurrentPlayer && canPlayFaceUp && isFaceUpPlayable}
                       disabled={canPlayFaceUp && !isFaceUpPlayable}
                     />
                   ) : (
-                    <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-10 h-[60px]'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200/20`} />
+                    <div className={`${mini ? 'w-8 h-11' : xsmall ? 'w-9 h-[52px]' : small ? 'w-14 h-20' : 'w-10 h-[60px]'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200/20`} />
                   )}
                 </div>
               )}
               {/* Face down card — when all face-ups gone, sits on top with no negative offset */}
               <div
-                className={`flex gap-2 -mr-[.5em] ${allFaceUpGone ? '' : mini ? '-mb-[3em]' : small ? '-mb-[5em]' : '-mb-[3.75em]'}`}
+                className={`flex gap-2 -mr-[.5em] ${allFaceUpGone ? '' : mini ? '-mb-[3em]' : xsmall ? '-mb-[3.25em]' : small ? '-mb-[5em]' : '-mb-[3.75em]'}`}
                 style={showRotation && slot.faceDown ? { transform: `rotate(${faceDownRot}deg)` } : undefined}
               >
                 {slot.faceDown ? (
@@ -94,11 +97,12 @@ export function PalaceDisplay({
                     faceDown
                     small={small}
                     mini={mini}
+                    xsmall={xsmall}
                     onClick={isCurrentPlayer && canPlayFaceDown && !slot.faceUp ? () => onFaceDownClick?.(i) : undefined}
                     highlight={isCurrentPlayer && canPlayFaceDown && !slot.faceUp}
                   />
                 ) : (
-                  <div className={`${mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-10 h-[60px]'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200`} />
+                  <div className={`${mini ? 'w-8 h-11' : xsmall ? 'w-9 h-[52px]' : small ? 'w-14 h-20' : 'w-10 h-[60px]'} ${mini ? 'rounded' : 'rounded-lg'} border border-dashed border-gray-200`} />
                 )}
               </div>
             </div>

@@ -1083,6 +1083,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               statsText={formatStatsText(me.stats)}
               centered={palaceIsActive}
               showRotation
+              xsmall
               playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
             />
           </div>
