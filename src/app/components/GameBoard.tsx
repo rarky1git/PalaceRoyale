@@ -1049,24 +1049,25 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
+      {/* Chat View toggle — shown above My area in multiplayer during play */}
+      {isMultiplayer && isPlaying && (
+        <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
+          <button
+            onClick={() => setChatMode(v => !v)}
+            title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+              chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+            }`}
+          >
+            <Video className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* My area - highlighted when my turn or draw bonus available */}
       <div className={`relative z-[1] shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
         (isMyTurn || hasDrawBonus) && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
       }`}>
-        {/* Chat View toggle — shown above palace in multiplayer during play */}
-        {isMultiplayer && isPlaying && (
-          <div className="flex justify-end px-1">
-            <button
-              onClick={() => setChatMode(v => !v)}
-              title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
-                chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
-              }`}
-            >
-              <Video className="w-4 h-4" />
-            </button>
-          </div>
-        )}
         {/* My Palace - centered during setup/active, hidden when empty during play */}
         {showPalace && (
           <div className={`transition-all duration-300 overflow-visible ${palaceIsActive ? 'flex justify-center' : ''}`}>
