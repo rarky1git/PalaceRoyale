@@ -431,7 +431,7 @@ export default function HomePage() {
         </div>
       )}
       <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
-        v0.6.1
+        {`v${APP_VERSION}`}
       </footer>
     </div>
   );
