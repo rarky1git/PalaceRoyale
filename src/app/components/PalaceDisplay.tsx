@@ -44,7 +44,9 @@ export function PalaceDisplay({
   const allFaceUpGone = palace.every(slot => !slot.faceUp);
 
   return (
-    <div className={`flex flex-col gap-3.5 ${centered ? 'items-center' : 'items-left'}`}>
+    <div
+      className={`flex flex-col gap-3.5 rounded-lg ${centered ? 'items-center' : 'items-start'}`}
+    >
       {playerName && (
         <div className="flex items-center gap-1">
           <span className={`${small || mini ? 'text-[10px]' : 'text-xs'} font-bold text-gray-200 truncate max-w-32`}>

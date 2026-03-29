@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw } from 'lucide-react';
-import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats } from '../game-engine';
+import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles } from 'lucide-react';
+import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
+import { WHATS_NEW_SEEN_KEY, APP_VERSION } from './WhatsNewPage';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
-const BOT_EMOJIS = ['🤖', '👾', '🎮', '🃏'];
 const STATS_KEY = 'palace-stats';
 
 function formatShortDateTime(ts?: number): string {
@@ -35,6 +35,10 @@ export default function HomePage() {
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
   const [savedGames, setSavedGames] = useState<{ code: string; playerId: string; savedAt?: number }[]>([]);
   const [myStats, setMyStats] = useState<PlayerStats | null>(null);
+  // True when the user hasn't seen the What's New page for the current version yet
+  const [showWhatsNew] = useState<boolean>(() => {
+    try { return localStorage.getItem(WHATS_NEW_SEEN_KEY) !== APP_VERSION; } catch { return false; }
+  });
 
   // Auto-focus the custom emoji input when it becomes visible
   useEffect(() => {
@@ -120,17 +124,21 @@ export default function HomePage() {
     if (!playerName.trim()) return;
     const names = [playerName.trim()];
     const emojis = [playerEmoji];
+
+    // Shuffle BOT_PROFILES and pick unique knights for each bot slot
+    const shuffled = [...BOT_PROFILES].sort(() => Math.random() - 0.5);
     for (let i = 1; i < playerCount; i++) {
-      names.push(`Bot ${i}`);
-      emojis.push(BOT_EMOJIS[(i - 1) % BOT_EMOJIS.length]);
+      const profile = shuffled[(i - 1) % shuffled.length];
+      names.push(profile.name);
+      emojis.push(profile.emoji);
     }
-    navigate('/robot', { state: { playerNames: names, playerEmojis: emojis, dealerIndex: 0 } });
+    navigate('/robot', { state: { playerNames: names, playerEmojis: emojis, dealerIndex: 0, deckCount } });
   };
 
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
     if (multiAction === 'create') {
-      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount } });
+      navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount, deckCount } });
     } else {
       if (!gameCode.trim()) return;
       navigate('/lobby', { state: { action: 'join', playerName: playerName.trim(), playerEmoji, code: gameCode.trim().toUpperCase() } });
@@ -197,6 +205,20 @@ export default function HomePage() {
 
       {mode === 'menu' && (
         <div className="flex flex-col gap-3 w-full max-w-xs">
+          {/* What's New banner — shown only when user hasn't seen current version's notes */}
+          {showWhatsNew && (
+            <button
+              onClick={() => navigate('/whats-new')}
+              className="flex items-center gap-3 w-full px-5 py-4 bg-yellow-500/20 border border-yellow-400/40 backdrop-blur rounded-xl hover:bg-yellow-500/30 active:scale-[0.98] transition-all"
+            >
+              <Sparkles className="w-6 h-6 text-yellow-300 shrink-0" />
+              <div className="text-left flex-1">
+                <div className="font-bold text-yellow-100">What's New in v{APP_VERSION}</div>
+                <div className="text-xs text-yellow-300">Knight bots, beginner mode & more</div>
+              </div>
+              <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full shrink-0">NEW</span>
+            </button>
+          )}
           {myStats && (
             <div className="flex items-center justify-between px-4 py-3 bg-yellow-500/10 border border-yellow-400/30 rounded-xl mb-1">
               <span className="text-xs text-yellow-300 font-semibold">🏆 Rankings</span>
@@ -283,6 +305,20 @@ export default function HomePage() {
                   key={n}
                   onClick={() => setPlayerCount(n)}
                   className={`flex-1 py-2 rounded-lg font-bold transition-all ${playerCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm text-green-300 mb-1 block">Card Decks</label>
+            <div className="flex gap-2">
+              {Array.from({ length: MAX_DECKS }, (_, i) => i + 1).map(n => (
+                <button
+                  key={n}
+                  onClick={() => setDeckCount(n)}
+                  className={`flex-1 py-2 rounded-lg font-bold transition-all ${deckCount === n ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20'}`}
                 >
                   {n}
                 </button>
@@ -395,7 +431,7 @@ export default function HomePage() {
         </div>
       )}
       <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
-        v0.5.1
+        v0.6.0
       </footer>
     </div>
   );

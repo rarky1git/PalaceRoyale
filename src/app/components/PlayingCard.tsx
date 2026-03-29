@@ -1,4 +1,5 @@
 import { Card, getRankDisplay, getSuitSymbol, getSuitColor } from '../game-engine';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface PlayingCardProps {
   card?: Card | null;
@@ -12,6 +13,7 @@ interface PlayingCardProps {
 }
 
 export function PlayingCard({ card, faceDown, selected, onClick, small, mini, disabled, highlight }: PlayingCardProps) {
+  const { settings } = useSettings();
   const w = mini ? 'w-8 h-11' : small ? 'w-14 h-20' : 'w-12 h-18';
   const textSize = mini ? 'text-[8px]' : small ? 'text-xs' : 'text-[11px]';
 
@@ -34,12 +36,19 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
   const color = getSuitColor(card.suit);
   const isRed = color === 'red';
 
+  const beginnerBg = settings.beginnerMode
+    ? card.rank === 2 ? 'bg-blue-200'
+    : card.rank === 10 ? 'bg-red-200'
+    : card.rank === 7 ? 'bg-orange-200'
+    : 'bg-white'
+    : 'bg-white';
+
   if (mini) {
     return (
       <button
         onClick={onClick}
         disabled={disabled}
-        className={`${w} rounded border bg-white flex items-center justify-center cursor-pointer
+        className={`${w} rounded border ${beginnerBg} flex items-center justify-center cursor-pointer
           ${selected ? 'border-yellow-400 ring-1 ring-yellow-400' : 'border-gray-300'}
           ${disabled ? 'opacity-50' : ''}
           transition-all shrink-0`}
@@ -60,7 +69,7 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${w} rounded-lg border-2 bg-white flex flex-col items-start justify-between p-0.5 cursor-pointer
+      className={`${w} rounded-lg border-2 ${beginnerBg} flex flex-col items-start justify-between p-0.5 cursor-pointer
         ${selected ? 'border-yellow-400 ring-2 ring-yellow-400 -translate-y-2 shadow-lg' : 'border-gray-300'}
         ${highlight ? 'border-green-400 ring-2 ring-green-400 shadow-lg shadow-green-400/30' : ''}
         ${onClick && !disabled ? 'hover:shadow-md active:scale-95' : ''}

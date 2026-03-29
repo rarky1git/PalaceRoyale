@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { GameSettings } from '../contexts/SettingsContext';
 
@@ -47,11 +47,26 @@ const SETTING_ROWS: SettingRow[] = [
     iconOn: <Bug className="w-5 h-5 text-yellow-300" />,
     iconOff: <Bug className="w-5 h-5 text-green-500" />,
   },
+  {
+    key: 'beginnerMode',
+    label: 'Beginner Mode',
+    description: 'Color-codes special cards: 2 (blue), 7 (orange), 10 (red)',
+    iconOn: <GraduationCap className="w-5 h-5 text-yellow-300" />,
+    iconOff: <GraduationCap className="w-5 h-5 text-green-500" />,
+  },
+  {
+    key: 'turnHighlight',
+    label: 'Turn Flash',
+    description: 'Briefly flashes the board yellow when it becomes your turn',
+    iconOn: <Lightbulb className="w-5 h-5 text-yellow-300" />,
+    iconOff: <Lightbulb className="w-5 h-5 text-green-500" />,
+  },
 ];
 
 const GROUPS: { title: string; keys: Array<keyof GameSettings> }[] = [
   { title: 'Audio', keys: ['soundEnabled', 'musicEnabled'] },
   { title: 'Display', keys: ['fullscreenMode', 'particleEffects'] },
+  { title: 'Gameplay', keys: ['beginnerMode', 'turnHighlight'] },
   { title: 'Developer', keys: ['debugMode'] },
 ];
 

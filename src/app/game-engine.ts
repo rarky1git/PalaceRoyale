@@ -90,6 +90,38 @@ export function cardValue(rank: number): number {
 export const MAX_DECKS = 3;
 export const MAX_PLAYERS_PER_DECK = 5;
 
+// ---- Bot Profiles ----
+
+export interface BotProfile {
+  name: string;
+  emoji: string;
+  thinkDelayMin: number;   // ms — minimum thinking time before acting
+  thinkDelayMax: number;   // ms — maximum thinking time before acting
+  counterChance: number;   // 0–1: probability of attempting a counter
+  saveSpecials: boolean;   // if true, hoard 2s and 10s for later; if false, use freely
+  preferHighCards: boolean; // if true, play highest valid cards first
+  riskTolerance: number;   // 0–1: willingness to gamble on face-down plays and big swings
+}
+
+export const BOT_PROFILES: BotProfile[] = [
+  { name: 'Arthur',  emoji: '⚔️',  thinkDelayMin: 800,  thinkDelayMax: 1800, counterChance: 0.5, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.5 },
+  { name: 'James',   emoji: '🏇',  thinkDelayMin: 500,  thinkDelayMax: 1200, counterChance: 0.7, saveSpecials: false, preferHighCards: true,  riskTolerance: 0.8 },
+  { name: 'Francis', emoji: '🧙',  thinkDelayMin: 1200, thinkDelayMax: 2500, counterChance: 0.3, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.2 },
+  { name: 'Edward',  emoji: '🛡️',  thinkDelayMin: 900,  thinkDelayMax: 1600, counterChance: 0.9, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.4 },
+  { name: 'Henry',   emoji: '🎲',  thinkDelayMin: 600,  thinkDelayMax: 2000, counterChance: 0.5, saveSpecials: false, preferHighCards: false, riskTolerance: 0.9 },
+  { name: 'Richard', emoji: '🦌',  thinkDelayMin: 1500, thinkDelayMax: 3000, counterChance: 0.4, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.2 },
+  { name: 'William', emoji: '🗡️',  thinkDelayMin: 700,  thinkDelayMax: 1400, counterChance: 0.6, saveSpecials: false, preferHighCards: false, riskTolerance: 0.7 },
+  { name: 'Thomas',  emoji: '🧭',  thinkDelayMin: 2000, thinkDelayMax: 4000, counterChance: 0.4, saveSpecials: true,  preferHighCards: false, riskTolerance: 0.3 },
+];
+
+export function getBotProfile(name: string): BotProfile | undefined {
+  return BOT_PROFILES.find(p => p.name === name);
+}
+
+export function getRandomBotDelay(profile: BotProfile): number {
+  return Math.floor(profile.thinkDelayMin + Math.random() * (profile.thinkDelayMax - profile.thinkDelayMin));
+}
+
 export function createDeck(deckIndex: number = 0): Card[] {
   const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
   const cards: Card[] = [];
@@ -1200,7 +1232,7 @@ export function getCounterPlayableCards(state: GameState, playerId: string): Car
 }
 
 // AI handles counter opportunity
-export function aiHandleCounter(state: GameState): GameState {
+export function aiHandleCounter(state: GameState, profile?: BotProfile): GameState {
   const s = deepClone(state);
   if (!s.pendingCounter) return s;
 
@@ -1230,7 +1262,8 @@ export function aiHandleCounter(state: GameState): GameState {
 
     const lowestRank = sorted[0].rank;
     // Counter if lowest available card is relatively low (not wasting specials)
-    const shouldCounter = lowestRank !== 2 && lowestRank !== 10 && lowestRank <= 9;
+    const notWastingSpecial = profile?.saveSpecials === false || (lowestRank !== 2 && lowestRank !== 10);
+    const shouldCounter = notWastingSpecial && Math.random() < (profile?.counterChance ?? 0.5);
 
     if (shouldCounter) {
       // Play all cards of the chosen rank
@@ -1249,7 +1282,7 @@ export function aiHandleCounter(state: GameState): GameState {
 
 // ---- AI ----
 
-export function aiSetup(state: GameState, playerId: string): GameState {
+export function aiSetup(state: GameState, playerId: string, profile?: BotProfile): GameState {
   let s = deepClone(state);
   const player = s.players.find(p => p.id === playerId)!;
 
@@ -1261,20 +1294,26 @@ export function aiSetup(state: GameState, playerId: string): GameState {
 
   const player2 = s.players.find(p => p.id === playerId)!;
   if (player2.setupPhase === 'select-faceup') {
-    // Pick the 3 highest cards for face-up
-    const sorted = [...player2.setupCards].sort((a, b) => {
-      // Prefer high cards and special cards (2, 10) for face-up
-      const aVal = a.rank === 2 ? 15 : a.rank === 10 ? 16 : a.rank;
-      const bVal = b.rank === 2 ? 15 : b.rank === 10 ? 16 : b.rank;
-      return bVal - aVal;
-    });
-    s = selectFaceUpCards(s, playerId, sorted.slice(0, 3).map(c => c.id));
+    if (profile?.saveSpecials === false) {
+      // Pick 3 random cards from setupCards instead of highest
+      const shuffledSetup = shuffle([...player2.setupCards]);
+      s = selectFaceUpCards(s, playerId, shuffledSetup.slice(0, 3).map(c => c.id));
+    } else {
+      // Pick the 3 highest cards for face-up
+      const sorted = [...player2.setupCards].sort((a, b) => {
+        // Prefer high cards and special cards (2, 10) for face-up
+        const aVal = a.rank === 2 ? 15 : a.rank === 10 ? 16 : a.rank;
+        const bVal = b.rank === 2 ? 15 : b.rank === 10 ? 16 : b.rank;
+        return bVal - aVal;
+      });
+      s = selectFaceUpCards(s, playerId, sorted.slice(0, 3).map(c => c.id));
+    }
   }
 
   return s;
 }
 
-export function aiPlayTurn(state: GameState): GameState {
+export function aiPlayTurn(state: GameState, profile?: BotProfile): GameState {
   let s = deepClone(state);
   const player = s.players[s.currentPlayerIndex];
 
@@ -1314,14 +1353,23 @@ export function aiPlayTurn(state: GameState): GameState {
     byRank.get(c.rank)!.push(c);
   }
 
-  // Sort ranks by value (play lowest first), but save 2s and 10s
+  // Sort ranks by value, profile-aware: save specials or prefer high cards
   const ranks = [...byRank.keys()].sort((a, b) => {
-    const aVal = a === 2 ? 100 : a === 10 ? 99 : a;
-    const bVal = b === 2 ? 100 : b === 10 ? 99 : b;
-    return aVal - bVal;
+    const specialWeight = (r: number) => {
+      if (!profile || profile.saveSpecials) {
+        return r === 2 ? 100 : r === 10 ? 99 : r;
+      }
+      return r; // treat specials as normal values
+    };
+    const aVal = specialWeight(a);
+    const bVal = specialWeight(b);
+    // preferHighCards: descending; otherwise ascending
+    return profile?.preferHighCards ? bVal - aVal : aVal - bVal;
   });
 
-  const chosenRank = ranks[0];
+  const chosenRank = (profile?.riskTolerance ?? 0) >= 0.9 && Math.random() < 0.3
+    ? ranks[Math.floor(Math.random() * ranks.length)]
+    : ranks[0];
   const chosenCards = byRank.get(chosenRank)!;
 
   try {
@@ -1357,12 +1405,20 @@ export function aiPlayTurn(state: GameState): GameState {
     }
 
     const bonusRanks = [...bonusByRank.keys()].sort((a, b) => {
-      const aVal = a === 2 ? 100 : a === 10 ? 99 : a;
-      const bVal = b === 2 ? 100 : b === 10 ? 99 : b;
-      return aVal - bVal;
+      const specialWeight = (r: number) => {
+        if (!profile || profile.saveSpecials) {
+          return r === 2 ? 100 : r === 10 ? 99 : r;
+        }
+        return r;
+      };
+      const aVal = specialWeight(a);
+      const bVal = specialWeight(b);
+      return profile?.preferHighCards ? bVal - aVal : aVal - bVal;
     });
 
-    const bonusRank = bonusRanks[0];
+    const bonusRank = (profile?.riskTolerance ?? 0) >= 0.9 && Math.random() < 0.3
+      ? bonusRanks[Math.floor(Math.random() * bonusRanks.length)]
+      : bonusRanks[0];
     const bonusCards = bonusByRank.get(bonusRank)!;
 
     try {

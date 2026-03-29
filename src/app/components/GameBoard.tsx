@@ -15,6 +15,7 @@ import {
   setPlayerStats, computeGameRankings,
   revealFaceDownCards,
   resetGame, requestNewGame,
+  getBotProfile, getRandomBotDelay,
 } from '../game-engine';
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
@@ -39,6 +40,15 @@ function saveLocalStats(stats: PlayerStats): void {
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify(stats));
   } catch { /* ignore */ }
+}
+
+function getRankLabel(playerId: string, eliminated: string[]): string {
+  const idx = eliminated.indexOf(playerId);
+  if (idx === 0) return '🥇 Gold!';
+  if (idx === 1) return '🥈 Silver!';
+  if (idx === 2) return '🥉 Bronze!';
+  if (idx >= 3) return '✅ Safe!';
+  return 'Safe!';
 }
 
 // Returns a compact medal string like "🥇2 🥈1" or undefined if no medals
@@ -80,16 +90,19 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
-  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'pickup' | null>(null);
+  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
+  const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const palaceValidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
   const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
+  const [turnFlash, setTurnFlash] = useState(false);
   const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
@@ -143,7 +156,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         const playerName = gameState.players.find(p => p.id === action.playerId)?.name ?? '';
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
+        setPalaceValidCard(null);
         setAnimEffect('palace-invalid');
+        if (palaceValidTimerRef.current) { clearTimeout(palaceValidTimerRef.current); palaceValidTimerRef.current = null; }
         if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
         palaceInvalidTimerRef.current = setTimeout(() => {
           setAnimEffect(null);
@@ -156,10 +171,37 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     }
   }, [gameState.version, settings.particleEffects]);
 
-  // Cleanup palace-invalid timer on unmount
+  // Cleanup palace-invalid and palace-valid timers on unmount
   useEffect(() => () => {
     if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
+    if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
   }, []);
+
+  // Detect valid palace face-down reveal and trigger palace-valid animEffect
+  useEffect(() => {
+    if (gameState.lastAction?.type !== 'play') return;
+    const actingPlayer = gameState.players.find(p => p.id === gameState.lastAction?.playerId);
+    if (!actingPlayer) return;
+    // Palace phase: hand empty and draw pile empty
+    const isPalacePhase = actingPlayer.hand.length === 0 && gameState.drawPile.length === 0;
+    // Face-down phase: all face-up cards are also gone
+    const allFaceUpGone = actingPlayer.palace.every(s => !s.faceUp);
+    if (isPalacePhase && allFaceUpGone && gameState.lastAction?.cards?.[0]) {
+      const card = gameState.lastAction.cards[0];
+      setPalaceInvalidCard(null);
+      setPalaceInvalidPlayerName('');
+      setAnimEffect('palace-valid');
+      setPalaceValidCard(card);
+      if (palaceInvalidTimerRef.current) { clearTimeout(palaceInvalidTimerRef.current); palaceInvalidTimerRef.current = null; }
+      if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
+      palaceValidTimerRef.current = setTimeout(() => {
+        setAnimEffect(null);
+        setPalaceValidCard(null);
+        palaceValidTimerRef.current = null;
+      }, 1500);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.lastAction, gameState.version]);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -189,25 +231,42 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     prevNudgeCountRef.current = newNudgeCount;
   }, [gameState.nudgeCount, gameState.version, isMyTurn, isPlaying]);
 
+  // Turn flash: briefly flash yellow when it becomes the human player's turn
+  useEffect(() => {
+    if (!settings.turnHighlight || !isMyTurn || !isPlaying) return;
+    setTurnFlash(true);
+    const t = setTimeout(() => setTurnFlash(false), 600);
+    return () => clearTimeout(t);
+  }, [isMyTurn, isPlaying, settings.turnHighlight]);
+
   // AI turns for robot mode
   useEffect(() => {
     if (isMultiplayer || !isPlaying) return;
     if (isMyTurn) return;
 
+    // Get current player's bot profile for variable timing
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    const botProfile = getBotProfile(currentPlayer.name);
+    const aiDelay = botProfile
+      ? getRandomBotDelay(botProfile)
+      : Math.floor(800 + Math.random() * 800); // fallback: 800–1600ms random
+
     const timer = setTimeout(() => {
       try {
-        // Handle pending counter for AI
         if (gameState.pendingCounter) {
-          const newState = aiHandleCounter(gameState);
+          // Profile of the player who needs to handle the counter
+          const counterPlayer = gameState.players[gameState.currentPlayerIndex];
+          const counterProfile = getBotProfile(counterPlayer.name);
+          const newState = aiHandleCounter(gameState, counterProfile);
           onStateChange(newState);
           return;
         }
         const stealState = checkAISteal(gameState);
         if (stealState) { onStateChange(stealState); return; }
-        const newState = aiPlayTurn(gameState);
+        const newState = aiPlayTurn(gameState, botProfile);
         onStateChange(newState);
       } catch (e) { console.log('AI error:', e); }
-    }, 1200);
+    }, aiDelay);
     return () => clearTimeout(timer);
   }, [gameState.version, isMyTurn, isPlaying, isMultiplayer]);
 
@@ -218,7 +277,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       let s = deepClone(gameState);
       for (const p of s.players) {
         if (p.id === myPlayerId) continue;
-        if (p.setupPhase !== 'done') s = aiSetup(s, p.id);
+        if (p.setupPhase !== 'done') {
+          const p2Profile = getBotProfile(p.name);
+          s = aiSetup(s, p.id, p2Profile);
+        }
       }
       if (s.version !== gameState.version) onStateChange(s);
     }, 800);
@@ -459,6 +521,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
+      {/* Beginner mode: yellow flash overlay on player's turn */}
+      <motion.div
+        className="absolute inset-0 z-10 pointer-events-none bg-yellow-300"
+        animate={{ opacity: turnFlash ? 0.3 : 0 }}
+        transition={{ duration: 0.5 }}
+      />
       {/* Emoji waterfall — background layer, behind all game components */}
       <AnimatePresence>
         {(animEffect === 'wipeout' || animEffect === 'slam' || animEffect === 'sparkle') && animEmoji && (
@@ -674,6 +742,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
               isSetup={isSetup}
               isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
+              eliminated={gameState.eliminated || []}
               mini={miniOpponents}
               isBeforePlayer
               deferredSetup={deferredSetup}
@@ -688,6 +757,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === nextOpponent.id}
             isSetup={isSetup}
             isEliminated={(gameState.eliminated || []).includes(nextOpponent.id)}
+            eliminated={gameState.eliminated || []}
             mini={miniOpponents}
             isAfterPlayer
             deferredSetup={deferredSetup}
@@ -700,6 +770,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === opp.id}
             isSetup={isSetup}
             isEliminated={(gameState.eliminated || []).includes(opp.id)}
+            eliminated={gameState.eliminated || []}
             mini={miniOpponents}
             deferredSetup={deferredSetup}
           />
@@ -739,7 +810,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                   </motion.div>
                 );
               })}
-              {pileCards.length === 0 && !palaceInvalidCard && (
+              {pileCards.length === 0 && !palaceInvalidCard && !palaceValidCard && (
                 <div className="w-16 h-24 rounded-lg border-2 border-dashed border-green-600 flex items-center justify-center">
                   <span className="text-green-500 text-xs">Empty</span>
                 </div>
@@ -776,6 +847,44 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                   </div>
                 </motion.div>
               )}
+              {/* Palace-valid: animate the successfully played face-down card with a green grow effect */}
+              {animEffect === 'palace-valid' && palaceValidCard && (
+                <motion.div
+                  key="palace-valid-pile"
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ zIndex: 10 }}
+                  animate={{
+                    scale: [0.4, 1.15, 1],
+                    opacity: [0, 1, 1, 0],
+                  }}
+                  transition={{
+                    scale: { duration: 0.45, times: [0, 0.4, 1] },
+                    opacity: { duration: 1.5, times: [0, 0.08, 0.75, 1] },
+                  }}
+                >
+                  <div className="relative">
+                    <PileCard card={palaceValidCard} />
+                    {/* Green tint overlay */}
+                    <motion.div
+                      className="absolute inset-0 rounded-lg pointer-events-none"
+                      animate={{ opacity: [0, 0, 0.55, 0.55, 0] }}
+                      transition={{ duration: 1.5, times: [0, 0.05, 0.15, 0.75, 1] }}
+                      style={{
+                        background: 'rgba(34, 197, 94, 0.55)',
+                        boxShadow: '0 0 20px 6px rgba(34, 197, 94, 0.7)',
+                      }}
+                    />
+                    {/* Safe! label */}
+                    <motion.div
+                      className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-green-300 text-xs font-bold whitespace-nowrap"
+                      animate={{ opacity: [0, 1, 1, 0] }}
+                      transition={{ duration: 1.5, times: [0, 0.1, 0.75, 1] }}
+                    >
+                      ✅ Safe!
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )}
             </div>
             <span className="text-[10px] text-green-300">
               Pile ({gameState.pickupPile.length})
@@ -796,10 +905,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             />
           )}
           {isPlaying && !isFinished && (
-            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
+            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : animEffect === 'palace-valid' ? 'bg-green-900/40 text-green-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
               {animEffect === 'palace-invalid'
                 ? `❌ ${palaceInvalidPlayerName} picks up the pile!`
-                : isEliminated
+                : animEffect === 'palace-valid'
+                  ? '✅ Safe! Face-down card played successfully!'
+                  : isEliminated
                   ? "You're safe! Watching..."
                   : hasPendingCounter
                     ? 'Counter! Play to counter or pick up pile'
@@ -1071,8 +1182,8 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup }: {
-  player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; mini?: boolean;
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup }: {
+  player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
 }) {
   return (
@@ -1095,7 +1206,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, mini, isBe
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
           <div className="flex items-center gap-1 flex-wrap justify-center">
             {isEliminated ? (
-              <span className="text-[10px] text-green-300">Safe!</span>
+              <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
               <>
                 {formatStatsText(player.stats) && (

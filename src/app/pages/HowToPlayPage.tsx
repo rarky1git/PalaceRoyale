@@ -51,6 +51,61 @@ function RuleCard({ emoji, title, children }: { emoji: string; title: string; ch
   );
 }
 
+const rankRules: Record<number, { label: string; description: string; color?: string }> = {
+  2:  { label: '2', description: 'Wild reset — can be played on any card. The pile continues normally from 2 (low value). Next player can play anything.', color: 'bg-blue-200' },
+  7:  { label: '7', description: 'Reverse mirror — next player must play a card equal to or lower than 7 (not higher).', color: 'bg-orange-200' },
+  10: { label: '10', description: 'Wipeout — clears the entire discard pile. Grants a bonus turn. Can be played on any card.', color: 'bg-red-200' },
+  3:  { label: '3',  description: 'Standard card. Must be played on equal or higher rank.' },
+  4:  { label: '4',  description: 'Standard card. Must be played on equal or higher rank.' },
+  5:  { label: '5',  description: 'Standard card. Must be played on equal or higher rank.' },
+  6:  { label: '6',  description: 'Standard card. Must be played on equal or higher rank.' },
+  8:  { label: '8',  description: 'Standard card. Must be played on equal or higher rank.' },
+  9:  { label: '9',  description: 'Standard card. Must be played on equal or higher rank.' },
+  11: { label: 'J',  description: 'Jack. Must be played on equal or higher rank.' },
+  12: { label: 'Q',  description: 'Queen. Must be played on equal or higher rank.' },
+  13: { label: 'K',  description: 'King. Must be played on equal or higher rank.' },
+  14: { label: 'A',  description: 'Ace — the highest standard card. Very difficult to beat.' },
+};
+
+const RANK_ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 2];
+
+function InteractiveCardHierarchy() {
+  const [selectedRank, setSelectedRank] = useState<number | null>(null);
+  return (
+    <div className="space-y-3">
+      <p>Cards rank from lowest to highest. A card can only be played on a card of <strong className="text-white">equal or lower</strong> value (except special cards).</p>
+      <div className="flex flex-wrap gap-2 justify-center py-1">
+        {RANK_ORDER.map(rank => {
+          const rule = rankRules[rank];
+          const isSelected = selectedRank === rank;
+          return (
+            <button
+              key={rank}
+              onClick={() => setSelectedRank(isSelected ? null : rank)}
+              className={`w-10 h-14 rounded-lg border-2 flex flex-col items-start justify-between p-0.5 shadow-md transition-all active:scale-95
+                ${rule.color ?? 'bg-white'}
+                ${isSelected ? 'border-white ring-2 ring-white -translate-y-1 shadow-lg shadow-white/40' : 'border-gray-400'}
+              `}
+            >
+              <span className="text-[11px] font-bold leading-none text-gray-900">{rule.label}</span>
+              <span className="self-center text-sm text-gray-900">♠</span>
+              <span className="text-[11px] font-bold leading-none self-end rotate-180 text-gray-900">{rule.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center text-[11px] text-green-400">← lowest &nbsp;&nbsp;&nbsp; highest →</div>
+      {selectedRank !== null && rankRules[selectedRank] && (
+        <div className="mt-2 p-3 bg-white/10 rounded text-sm">
+          <span className="font-bold">{rankRules[selectedRank].label}:</span>{' '}
+          {rankRules[selectedRank].description}
+        </div>
+      )}
+      <p className="text-[11px]">Special cards <Pill color="blue">2</Pill>, <Pill color="orange">7</Pill>, and <Pill color="red">10</Pill> have unique rules — click them above!</p>
+    </div>
+  );
+}
+
 function AccordionSection({ section }: { section: Section }) {
   const [open, setOpen] = useState(false);
   return (
@@ -140,28 +195,7 @@ const sections: Section[] = [
     id: 'card-order',
     title: 'Card Hierarchy',
     emoji: '📊',
-    content: (
-      <div className="space-y-3">
-        <p>Cards rank from lowest to highest. A card can only be played on a card of <strong className="text-white">equal or lower</strong> value (except special cards).</p>
-        <div className="flex flex-wrap gap-1.5 justify-center py-1">
-          {[
-            { rank: '3', label: '♣' },
-            { rank: '4', label: '♠' },
-            { rank: '5', label: '♣' },
-            { rank: '6', label: '♠' },
-            { rank: '7', label: '♣' },
-            { rank: '8', label: '♠' },
-            { rank: '9', label: '♣' },
-            { rank: 'J', label: '♠' },
-            { rank: 'Q', label: '♣' },
-            { rank: 'K', label: '♠' },
-            { rank: 'A', label: '♣' },
-          ].map(c => <CardBadge key={c.rank} rank={c.rank} label={c.label} />)}
-        </div>
-        <div className="text-center text-[11px] text-green-400">← lowest &nbsp;&nbsp;&nbsp; highest →</div>
-        <p className="text-[11px]">Special cards <Pill color="yellow">2</Pill>, <Pill color="red">7</Pill>, and <Pill color="blue">10</Pill> have unique rules (see Special Cards section).</p>
-      </div>
-    ),
+    content: <InteractiveCardHierarchy />,
   },
   {
     id: 'special',
