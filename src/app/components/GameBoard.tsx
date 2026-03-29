@@ -815,9 +815,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         </div>
       )}
 
-      {/* Opponents area */}
+      {/* Opponents area — hidden when chat mode is active */}
       <div
-        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none`}
+        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${isMultiplayer && chatMode ? 'hidden' : ''}`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {prevOpponent && (
@@ -1053,6 +1053,20 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       <div className={`relative z-[1] shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
         (isMyTurn || hasDrawBonus) && isPlaying ? 'bg-yellow-500/15 ring-1 ring-yellow-400/50 ring-inset' : 'bg-black/20'
       }`}>
+        {/* Chat View toggle — shown above palace in multiplayer during play */}
+        {isMultiplayer && isPlaying && (
+          <div className="flex justify-end px-1">
+            <button
+              onClick={() => setChatMode(v => !v)}
+              title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+                chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+              }`}
+            >
+              <Video className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {/* My Palace - centered during setup/active, hidden when empty during play */}
         {showPalace && (
           <div className={`transition-all duration-300 overflow-visible ${palaceIsActive ? 'flex justify-center' : ''}`}>
@@ -1086,21 +1100,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
         {/* My Hand / Setup Cards - 2-row grid */}
         <div className="flex flex-col items-center gap-1 overflow-visible">
-          {/* Hand label row — includes Chat View toggle for multiplayer */}
+          {/* Hand label row */}
           <div className="flex items-center justify-between w-full px-1">
-            {isMultiplayer && isPlaying ? (
-              <button
-                onClick={() => setChatMode(v => !v)}
-                title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
-                  chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
-                }`}
-              >
-                <Video className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="w-7" />
-            )}
+            <div className="w-7" />
             <div className="flex-1 flex justify-center">
               {isPlaying && source === 'hand' ? (
                 <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
