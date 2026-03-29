@@ -1157,7 +1157,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           )}
           <div className="overflow-visible w-full">
             <div
-              className="grid gap-1 pt-4 pb-2 mx-auto"
+              className="grid gap-1 pt-4 pb-0.5 mx-auto"
               style={{
                 gridAutoFlow: 'row',
                 gridTemplateRows: useDoubleRow ? 'repeat(2, auto)' : 'auto',
