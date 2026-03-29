@@ -783,18 +783,21 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
 
           {/* Last played info */}
-          {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (
-            <div className="border-t border-white/10 px-2 py-1">
-              <div className="text-[8px] text-green-400 leading-tight">Last played:</div>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
-                <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
+          {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (() => {
+            const lastPlayedStatsText = formatStatsText(lastPlayedPlayer.stats);
+            return (
+              <div className="border-t border-white/10 px-2 py-1">
+                <div className="text-[8px] text-green-400 leading-tight">Last played:</div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
+                  <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
+                </div>
+                {lastPlayedStatsText && (
+                  <div className="text-[8px] text-yellow-300 mt-0.5">{lastPlayedStatsText}</div>
+                )}
               </div>
-              {formatStatsText(lastPlayedPlayer.stats) && (
-                <div className="text-[8px] text-yellow-300 mt-0.5">{formatStatsText(lastPlayedPlayer.stats)}</div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
           {/* Align toggle */}
           <div className="flex justify-end px-1.5 pb-1.5">
