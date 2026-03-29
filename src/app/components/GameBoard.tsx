@@ -1303,7 +1303,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
       isAfterPlayer ? 'bg-green-500/20' :
       'bg-black/10'
     }`}>
-      <span className="text-[10px] font-bold truncate max-w-26">
+      <span className="text-[10px] font-bold truncate max-w-26 mb-1">
         {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
       {isSetup ? (
@@ -1313,7 +1313,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
       ) : (
         <>
           <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
-          <div className="flex items-center gap-1 flex-wrap justify-center mt-2">
+          <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
             {isEliminated ? (
               <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
