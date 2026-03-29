@@ -784,8 +784,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
-      {/* Chat View — floating opponent overlay (multiplayer only) */}
-      {isMultiplayer && isPlaying && chatMode && chatOpponent && (
+      {/* Chat View — floating opponent overlay */}
+      {isPlaying && chatMode && chatOpponent && (
         <div
           className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} w-32 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
           style={{ maxWidth: 'calc(50% - 1rem)' }}
@@ -849,7 +849,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
       {/* Opponents area — hidden when chat mode is active */}
       <div
-        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${isMultiplayer && chatMode ? 'hidden' : ''}`}
+        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${chatMode ? 'hidden' : ''}`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {prevOpponent && (
@@ -1081,8 +1081,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
-      {/* Chat View toggle — shown above My area in multiplayer during play */}
-      {isMultiplayer && isPlaying && (
+      {/* Chat View toggle — shown above My area during play */}
+      {isPlaying && (
         <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
           <button
             onClick={() => setChatMode(v => !v)}
