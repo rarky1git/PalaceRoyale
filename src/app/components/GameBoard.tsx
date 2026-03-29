@@ -919,24 +919,42 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 width: 'max-content',
               }}
             >
-            {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => (
-              <PlayingCard
-                key={card.id}
-                faceDown
-                small
-                selected={selectedCards.includes(card.id)}
-                onClick={() => toggleCard(card.id)}
-              />
-            ))}
-            {isSetup && me.setupPhase === 'select-faceup' && me.setupCards.map(card => (
-              <PlayingCard
-                key={card.id}
-                card={card}
-                small
-                selected={selectedCards.includes(card.id)}
-                onClick={() => toggleCard(card.id)}
-              />
-            ))}
+            {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => {
+              const isSelected = selectedCards.includes(card.id);
+              const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;
+              return (
+                <motion.div
+                  key={card.id}
+                  animate={{ rotate: selRotation, y: isSelected ? -8 : 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PlayingCard
+                    faceDown
+                    small
+                    selected={isSelected}
+                    onClick={() => toggleCard(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
+            {isSetup && me.setupPhase === 'select-faceup' && me.setupCards.map(card => {
+              const isSelected = selectedCards.includes(card.id);
+              const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;
+              return (
+                <motion.div
+                  key={card.id}
+                  animate={{ rotate: selRotation, y: isSelected ? -8 : 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PlayingCard
+                    card={card}
+                    small
+                    selected={isSelected}
+                    onClick={() => toggleCard(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
             {isPlaying && source === 'hand' && sortedHand.map(card => {
               const isPlayable = playableCardIds.includes(card.id);
               const isSelected = selectedCards.includes(card.id);
