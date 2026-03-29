@@ -1180,7 +1180,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         {/* Hand count chip - below hand cards, above action buttons */}
         {isPlaying && source === 'hand' && (
           <div className="flex justify-center">
-            <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
+            <span className="bg-white/15 text-green-200 px-2 py-px rounded-full text-[10px] font-medium">
               Hand ({me.hand.length})
             </span>
           </div>
