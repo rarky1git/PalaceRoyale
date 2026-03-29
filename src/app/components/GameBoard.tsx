@@ -22,6 +22,7 @@ import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
 import { useSettings } from '../contexts/SettingsContext';
+import { TutorialOverlay, TUTORIAL_STEPS, TUTORIAL_SEEN_KEY } from './TutorialOverlay';
 
 // Seeded random per card ID for consistent rotations
 const DEFAULT_EMOJI = '🦆';
@@ -83,14 +84,17 @@ interface GameBoardProps {
   onStateChange: (state: GameState) => void;
   isMultiplayer?: boolean;
   playerEmoji?: string; // Local player's chosen emoji (for multiplayer emoji sync)
+  tutorialMode?: boolean; // When true, show step-by-step tutorial overlay
 }
 
-export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji }: GameBoardProps) {
+export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji, tutorialMode = false }: GameBoardProps) {
   const navigate = useNavigate();
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  // Tutorial step: 0 = hidden, 1..N = active step
+  const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
@@ -542,6 +546,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   // Pile cards for display (show up to 5 beneath top card)
   const pileCards = gameState.pickupPile.slice(-6);
 
+  // Tutorial handlers
+  const totalTutorialSteps = TUTORIAL_STEPS.length;
+  const handleTutorialNext = () => {
+    if (tutorialStep >= totalTutorialSteps) {
+      // Tutorial complete
+      try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* ignore */ }
+      setTutorialStep(0);
+    } else {
+      setTutorialStep(s => s + 1);
+    }
+  };
+  const handleTutorialSkip = () => {
+    // Skip/dismiss mid-tutorial also marks as seen
+    try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* ignore */ }
+    setTutorialStep(0);
+  };
+
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
       {/* Beginner mode: yellow flash overlay on player's turn */}
@@ -550,6 +571,16 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         animate={{ opacity: turnFlash ? 0.3 : 0 }}
         transition={{ duration: 0.5 }}
       />
+      {/* Tutorial overlay — shown during guided tutorial mode */}
+      {tutorialMode && tutorialStep > 0 && (
+        <TutorialOverlay
+          step={tutorialStep}
+          totalSteps={totalTutorialSteps}
+          onNext={handleTutorialNext}
+          onSkip={handleTutorialSkip}
+        />
+      )}
+
       {/* Emoji waterfall — background layer, behind all game components */}
       <AnimatePresence>
         {(animEffect === 'wipeout' || animEffect === 'slam' || animEffect === 'sparkle') && animEmoji && (

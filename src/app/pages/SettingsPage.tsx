@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb, History } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { GameSettings } from '../contexts/SettingsContext';
+import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
 
 interface SettingRow {
   key: keyof GameSettings;
@@ -144,20 +145,36 @@ export const SettingsPage: React.FC = () => {
           );
         })}
 
-        {/* Version History link */}
+        {/* Version History & Tutorial links */}
         <div>
           <h2 className="text-xs uppercase tracking-widest text-green-400 mb-2 pl-1">About</h2>
-          <button
-            onClick={() => navigate('/version-log')}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
-          >
-            <History className="w-5 h-5 text-green-400" />
-            <div className="text-left flex-1">
-              <div className="font-semibold text-sm text-green-300">Version History</div>
-              <div className="text-xs text-green-400">See all past releases</div>
-            </div>
-            <span className="text-green-500 text-sm">→</span>
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => navigate('/version-log')}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
+            >
+              <History className="w-5 h-5 text-green-400" />
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-green-300">Version History</div>
+                <div className="text-xs text-green-400">See all past releases</div>
+              </div>
+              <span className="text-green-500 text-sm">→</span>
+            </button>
+            <button
+              onClick={() => {
+                try { localStorage.removeItem(TUTORIAL_SEEN_KEY); } catch { /* ignore */ }
+                navigate('/');
+              }}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
+            >
+              <GraduationCap className="w-5 h-5 text-yellow-400" />
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-yellow-300">Tutorial</div>
+                <div className="text-xs text-green-400">Replay the guided tutorial</div>
+              </div>
+              <span className="text-green-500 text-sm">→</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
