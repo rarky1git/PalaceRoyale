@@ -22,6 +22,17 @@ import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
 import { useSettings } from '../contexts/SettingsContext';
+import {
+  playCardPlay,
+  playCardPickup,
+  playWipeout,
+  playSparkle,
+  playSlamDown,
+  playBonusTurn,
+  playGameWin,
+  playGameLose,
+  playInvalidPlay,
+} from '@/utils/sounds';
 
 // Seeded random per card ID for consistent rotations
 const DEFAULT_EMOJI = '🦆';
@@ -174,6 +185,50 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       prevVersionRef.current = gameState.version;
     }
   }, [gameState.version, settings.particleEffects]);
+
+  // Sound effects based on lastAction
+  useEffect(() => {
+    if (gameState.version === prevVersionRef.current) return;
+    const action = gameState.lastAction;
+    if (!action) return;
+    switch (action.type) {
+      case 'slam': playSlamDown(settings); break;
+      case 'wipeout': playWipeout(settings); break;
+      case 'sparkle': playSparkle(settings); break;
+      case 'pickup': playCardPickup(settings); break;
+      case 'play': playCardPlay(settings); break;
+      case 'palace-invalid': playInvalidPlay(settings); break;
+      default: break;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.version]);
+
+  // Bonus turn sound
+  const prevWaitingForBonusRef = useRef(gameState.waitingForBonus);
+  useEffect(() => {
+    if (!prevWaitingForBonusRef.current && gameState.waitingForBonus) {
+      playBonusTurn(settings);
+    }
+    prevWaitingForBonusRef.current = gameState.waitingForBonus;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.waitingForBonus]);
+
+  // Game-end sound: win or lose
+  const soundPlayedForGameRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isFinished || !gameState.loser) return;
+    if (soundPlayedForGameRef.current === gameState.version) return;
+    soundPlayedForGameRef.current = gameState.version;
+    const ranked = computeGameRankings(gameState);
+    const myRankIndex = ranked.indexOf(myPlayerId);
+    if (myRankIndex === -1) return;
+    if (myRankIndex === gameState.players.length - 1) {
+      playGameLose(settings);
+    } else {
+      playGameWin(settings);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinished, gameState.loser, gameState.version]);
 
   // Cleanup palace-invalid and palace-valid timers on unmount
   useEffect(() => () => {
