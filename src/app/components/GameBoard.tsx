@@ -165,7 +165,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setPalaceValidCard(null);
-        setAnimEffect('palace-invalid');
+        if (settings.particleEffects) {
+          setAnimEffect('palace-invalid');
+        }
         if (palaceValidTimerRef.current) { clearTimeout(palaceValidTimerRef.current); palaceValidTimerRef.current = null; }
         if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
         palaceInvalidTimerRef.current = setTimeout(() => {
@@ -199,7 +201,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       const card = gameState.lastAction.cards[0];
       setPalaceInvalidCard(null);
       setPalaceInvalidPlayerName('');
-      setAnimEffect('palace-valid');
+      if (settings.particleEffects) {
+        setAnimEffect('palace-valid');
+      }
       setPalaceValidCard(card);
       if (palaceInvalidTimerRef.current) { clearTimeout(palaceInvalidTimerRef.current); palaceInvalidTimerRef.current = null; }
       if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
