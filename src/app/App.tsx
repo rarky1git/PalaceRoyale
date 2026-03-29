@@ -3,8 +3,7 @@ import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
-
-const APP_VERSION = '0.6.0';
+import { APP_VERSION } from './pages/WhatsNewPage';
 
 export default function App() {
   useEffect(() => {

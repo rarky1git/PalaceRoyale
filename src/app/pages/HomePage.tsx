@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw } from 'lucide-react';
+import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles } from 'lucide-react';
 import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
+import { WHATS_NEW_SEEN_KEY, APP_VERSION } from './WhatsNewPage';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
 const STATS_KEY = 'palace-stats';
@@ -34,6 +35,10 @@ export default function HomePage() {
   const [multiAction, setMultiAction] = useState<'create' | 'join'>('create');
   const [savedGames, setSavedGames] = useState<{ code: string; playerId: string; savedAt?: number }[]>([]);
   const [myStats, setMyStats] = useState<PlayerStats | null>(null);
+  // True when the user hasn't seen the What's New page for the current version yet
+  const [showWhatsNew] = useState<boolean>(() => {
+    try { return localStorage.getItem(WHATS_NEW_SEEN_KEY) !== APP_VERSION; } catch { return false; }
+  });
 
   // Auto-focus the custom emoji input when it becomes visible
   useEffect(() => {
@@ -200,6 +205,20 @@ export default function HomePage() {
 
       {mode === 'menu' && (
         <div className="flex flex-col gap-3 w-full max-w-xs">
+          {/* What's New banner — shown only when user hasn't seen current version's notes */}
+          {showWhatsNew && (
+            <button
+              onClick={() => navigate('/whats-new')}
+              className="flex items-center gap-3 w-full px-5 py-4 bg-yellow-500/20 border border-yellow-400/40 backdrop-blur rounded-xl hover:bg-yellow-500/30 active:scale-[0.98] transition-all"
+            >
+              <Sparkles className="w-6 h-6 text-yellow-300 shrink-0" />
+              <div className="text-left flex-1">
+                <div className="font-bold text-yellow-100">What's New in v{APP_VERSION}</div>
+                <div className="text-xs text-yellow-300">Knight bots, beginner mode & more</div>
+              </div>
+              <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full shrink-0">NEW</span>
+            </button>
+          )}
           {myStats && (
             <div className="flex items-center justify-between px-4 py-3 bg-yellow-500/10 border border-yellow-400/30 rounded-xl mb-1">
               <span className="text-xs text-yellow-300 font-semibold">🏆 Rankings</span>

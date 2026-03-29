@@ -6,6 +6,7 @@ import MultiplayerGamePage from './pages/MultiplayerGamePage';
 import HowToPlayPage from './pages/HowToPlayPage';
 import SettingsPage from './pages/SettingsPage';
 import RejoinGamesPage from './pages/RejoinGamesPage';
+import WhatsNewPage from './pages/WhatsNewPage';
 
 export const router = createBrowserRouter([
   { path: '/', Component: HomePage },
@@ -15,4 +16,5 @@ export const router = createBrowserRouter([
   { path: '/how-to-play', Component: HowToPlayPage },
   { path: '/settings', Component: SettingsPage },
   { path: '/rejoin-games', Component: RejoinGamesPage },
+  { path: '/whats-new', Component: WhatsNewPage },
 ]);
