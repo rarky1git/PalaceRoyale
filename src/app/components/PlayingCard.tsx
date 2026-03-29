@@ -23,8 +23,8 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
         onClick={onClick}
         disabled={disabled && !onClick}
         className={`${w} ${mini ? 'rounded border' : 'rounded-lg border-2'} flex items-center justify-center cursor-pointer
-          ${highlight ? 'border-yellow-400 bg-gradient-to-br from-blue-700 to-blue-900 shadow-lg shadow-yellow-400/30 animate-pulse' : 'border-gray-400 bg-gradient-to-br from-blue-600 to-blue-800'}
-          ${selected ? `${mini ? 'ring-1' : 'ring-2'} ring-yellow-400 -translate-y-2` : ''}
+          ${highlight ? 'border-yellow-400 bg-gradient-to-br from-blue-700 to-blue-900 shadow-lg shadow-yellow-400/50 [box-shadow:0_0_16px_4px_rgba(250,204,21,0.45)] animate-pulse' : 'border-gray-400 bg-gradient-to-br from-blue-600 to-blue-800'}
+          ${selected ? `${mini ? 'ring-1' : 'ring-1'} ring-yellow-400 -translate-y-2` : ''}
           ${onClick && !disabled ? 'hover:brightness-110 active:scale-95' : ''}
           transition-all shrink-0`}
       >
@@ -70,8 +70,8 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
       onClick={onClick}
       disabled={disabled}
       className={`${w} rounded-lg border-2 ${beginnerBg} flex flex-col items-start justify-between p-0.5 cursor-pointer
-        ${selected ? 'border-yellow-400 ring-2 ring-yellow-400 -translate-y-2 shadow-lg' : 'border-gray-300'}
-        ${highlight ? 'border-green-400 ring-2 ring-green-400 shadow-lg shadow-green-400/30' : ''}
+        ${selected ? 'border-yellow-400 ring-1 ring-yellow-400 -translate-y-2 shadow-lg' : 'border-gray-300'}
+        ${highlight ? 'border-green-400 ring-1 ring-green-400 shadow-lg shadow-green-400/50 [box-shadow:0_0_16px_4px_rgba(74,222,128,0.4)]' : ''}
         ${onClick && !disabled ? 'hover:shadow-md active:scale-95' : ''}
         ${disabled ? 'opacity-60' : ''}
         transition-all shrink-0`}
