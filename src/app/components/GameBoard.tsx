@@ -825,7 +825,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         >
           {/* Opponent info */}
           <div className="flex items-center gap-1.5 px-2 pt-2 pb-1">
-            <span className="text-base leading-none">{chatOpponent.emoji || DEFAULT_EMOJI}</span>
+            <span className="text-base leading-none">{chatOpponent.emoji}</span>
             <span className={`text-[10px] font-bold truncate flex-1 ${
               (gameState.eliminated || []).includes(chatOpponent.id) ? 'text-green-300' :
               currentPlayer?.id === chatOpponent.id ? 'text-yellow-300' : 'text-white'
@@ -871,7 +871,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               return (
                 <>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
+                    <span className="text-[11px]">{lastPlayedPlayer.emoji}</span>
                     <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
                   </div>
                   {lastPlayedStatsText && (
@@ -891,7 +891,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 if (!ep) return null;
                 return (
                   <div key={pid} className="flex items-center gap-1 mt-0.5">
-                    <span className="text-[11px]">{ep.emoji || DEFAULT_EMOJI}</span>
+                    <span className="text-[11px]">{ep.emoji}</span>
                     <span className="text-[9px] text-white font-medium truncate flex-1">{ep.name}</span>
                     <span className="text-[8px] text-yellow-300 shrink-0">{getRankLabel(pid, gameState.eliminated)}</span>
                   </div>
@@ -1358,7 +1358,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 className="px-3 py-1.5 bg-white/10 text-xl rounded-lg hover:bg-white/20 active:scale-90 transition-all"
                 title={`Nudge ${currentPlayer.name}`}
               >
-                {currentPlayer.emoji || DEFAULT_EMOJI}
+                {currentPlayer.emoji}
               </button>
             )}
           </div>
@@ -1434,7 +1434,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
       'bg-black/10'
     }`}>
       <span className="text-[10px] font-bold truncate max-w-26 mb-1">
-        {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
+        {player.emoji} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
       {isSetup ? (
         <span className="text-[10px] text-green-300">
@@ -1530,7 +1530,7 @@ function GameEndLeaderboard({ gameState, myPlayerId, phase, onNext, onHome }: {
       {myPlayer?.stats && (
         <div className="bg-yellow-500/20 rounded-xl px-3 py-2 text-sm">
           <div className="font-bold text-yellow-200 mb-1">
-            {myPlayer.emoji || DEFAULT_EMOJI} {myPlayer.name} ({myRankIndex >= 0 ? (medals[myRankIndex] || '💀') : '—'} this game)
+            {myPlayer.emoji} {myPlayer.name} ({myRankIndex >= 0 ? (medals[myRankIndex] || '💀') : '—'} this game)
           </div>
           <div className="flex justify-center gap-3 text-xs">
             <span>🥇 {myPlayer.stats.gold}</span>
@@ -1546,7 +1546,7 @@ function GameEndLeaderboard({ gameState, myPlayerId, phase, onNext, onHome }: {
           <div className="text-[10px] text-green-400 font-semibold">Other Players</div>
           {gameState.players.filter(p => p.id !== myPlayerId && p.stats).map(p => (
             <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 bg-white/10 rounded-lg text-xs">
-              <span>{p.emoji || DEFAULT_EMOJI}</span>
+              <span>{p.emoji}</span>
               <span className="flex-1 text-left truncate">{p.name}</span>
               {p.stats && (
                 <span className="text-yellow-300 text-[9px]">{formatStatsText(p.stats)}</span>

@@ -41,7 +41,7 @@ export default function RobotGamePage() {
           gameState={gameState}
           myPlayerId="player-0"
           onStateChange={setGameState}
-          playerEmoji={playerEmojis?.[0]}
+          playerEmoji={playerEmojis[0]}
           tutorialMode={tutorial}
         />
       </div>

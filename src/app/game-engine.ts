@@ -24,7 +24,7 @@ export interface PlayerStats {
 export interface Player {
   id: string;
   name: string;
-  emoji?: string; // Player's chosen emoji avatar
+  emoji: string; // Player's chosen emoji avatar
   hand: Card[];
   palace: PalaceSlot[];
   setupPhase: 'select-facedown' | 'select-faceup' | 'done';
@@ -145,7 +145,7 @@ export function shuffle<T>(arr: T[]): T[] {
 
 // ---- Game Init ----
 
-export function initGame(playerNames: string[], dealerIndex: number = 0, numberOfDecks: number = 1, playerEmojis?: string[]): GameState {
+export function initGame(playerNames: string[], dealerIndex: number = 0, numberOfDecks: number = 1, playerEmojis: string[]): GameState {
   const clampedDecks = Math.max(1, Math.min(MAX_DECKS, numberOfDecks));
   const combined: Card[] = [];
   for (let d = 0; d < clampedDecks; d++) {
@@ -155,7 +155,7 @@ export function initGame(playerNames: string[], dealerIndex: number = 0, numberO
   const players: Player[] = playerNames.map((name, i) => ({
     id: `player-${i}`,
     name,
-    emoji: playerEmojis?.[i],
+    emoji: playerEmojis[i],
     hand: [],
     palace: [
       { faceDown: null, faceUp: null },
@@ -1496,7 +1496,7 @@ export function revealFaceDownCards(state: GameState, playerId: string): GameSta
 // Reset game for rematch — same players, new deal. Loser deals.
 export function resetGame(state: GameState, numberOfDecks: number = state.numberOfDecks ?? 1): GameState {
   const playerNames = state.players.map(p => p.name);
-  const playerEmojis = state.players.map(p => p.emoji || '🦆');
+  const playerEmojis = state.players.map(p => p.emoji);
   const playerStats = state.players.map(p => p.stats);
 
   // Loser deals next game
