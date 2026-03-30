@@ -45,7 +45,7 @@ function TutorialBanner({ onStart, onDismiss }: { onStart: () => void; onDismiss
       {/* Dismiss button revealed by swiping */}
       <div
         className={`absolute inset-y-0 flex items-center justify-center transition-opacity ${
-          dragX > 0 ? 'right-0 pr-3' : 'left-0 pl-3'
+          dragX > 0 ? 'left-0 pl-3' : 'right-0 pr-3'
         } ${revealed ? 'opacity-100' : 'opacity-0'}`}
         style={{ width: 64 }}
       >
