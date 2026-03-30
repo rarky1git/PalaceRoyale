@@ -44,11 +44,11 @@ export default function LobbyPage() {
     try {
       const res = await fetch(`${API}/games`, {
         method: 'POST', headers,
-        body: JSON.stringify({ playerName, playerEmoji: playerEmoji || DEFAULT_EMOJI_FALLBACK, playerCount }),
+        body: JSON.stringify({ playerName, playerEmoji, playerCount }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const myEmoji = playerEmoji || DEFAULT_EMOJI_FALLBACK;
+      const myEmoji = playerEmoji;
       setGameCode(data.code);
       setPlayerId(data.playerId);
       setPlayers([{ id: data.playerId, name: playerName, emoji: myEmoji }]);
@@ -66,18 +66,18 @@ export default function LobbyPage() {
     try {
       const res = await fetch(`${API}/games/${joinCode}/join`, {
         method: 'POST', headers,
-        body: JSON.stringify({ playerName, playerEmoji: playerEmoji || DEFAULT_EMOJI_FALLBACK }),
+        body: JSON.stringify({ playerName, playerEmoji}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const myEmoji = playerEmoji || DEFAULT_EMOJI_FALLBACK;
+      const myEmoji = playerEmoji;
       setGameCode(joinCode);
       setPlayerId(data.playerId);
       setPlayers(data.players);
       // Build emoji map from server player records
       const emojiMap: Record<string, string> = {};
       (data.players as { id: string; name: string; emoji?: string }[]).forEach(p => {
-        emojiMap[p.id] = p.emoji || DEFAULT_EMOJI_FALLBACK;
+        emojiMap[p.id] = p.emoji;
       });
       setPlayerEmojiMap(emojiMap);
       setLoading(false);
@@ -106,7 +106,7 @@ export default function LobbyPage() {
         // emojis are immediately visible to both host and non-host players
         const emojiMap: Record<string, string> = {};
         (data.players as { id: string; name: string; emoji?: string }[]).forEach(p => {
-          emojiMap[p.id] = p.emoji || DEFAULT_EMOJI_FALLBACK;
+          emojiMap[p.id] = p.emoji;
         });
         setPlayerEmojiMap(emojiMap);
 
@@ -123,7 +123,7 @@ export default function LobbyPage() {
     // Host starts the game
     const playerNames = players.map(p => p.name);
     // Read emojis from server player records
-    const emojis = players.map(p => p.emoji || playerEmojiMap[p.id] || DEFAULT_EMOJI_FALLBACK);
+    const emojis = players.map(p => p.emoji || playerEmojiMap[p.id]);
     // Use host's explicit deck selection directly — do not cap by player count.
     // The host may intentionally use multiple decks with a smaller group.
     const state = initGame(playerNames, 0, deckCount ?? 1, emojis);
@@ -137,7 +137,7 @@ export default function LobbyPage() {
         throw new Error(data.error);
       }
       clearInterval(pollRef.current);
-      navigate('/multiplayer', { state: { code: gameCode, playerId, playerEmoji: players.find(p => p.id === playerId)?.emoji || playerEmojiMap[playerId] || DEFAULT_EMOJI_FALLBACK, gameState: state } });
+      navigate('/multiplayer', { state: { code: gameCode, playerId, playerEmoji: players.find(p => p.id === playerId)?.emoji || playerEmojiMap[playerId], gameState: state } });
     } catch (e: any) {
       setError(e.message);
     }
@@ -192,7 +192,7 @@ export default function LobbyPage() {
         {players.map((p, i) => (
           <div key={p.id} className="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">
             <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-lg">
-              {p.emoji || playerEmojiMap[p.id] || DEFAULT_EMOJI_FALLBACK}
+              {p.emoji || playerEmojiMap[p.id]}
             </div>
             <span className="font-medium">{p.name}</span>
             {i === 0 && <span className="text-[10px] bg-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded-full ml-auto">Host</span>}
