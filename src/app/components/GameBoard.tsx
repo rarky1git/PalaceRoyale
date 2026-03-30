@@ -837,9 +837,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
 
           {/* Palace (only when in palace phase) or hand count */}
-          <div className="px-2 pb-1">
+          <div className="px-2 py-px">
             {chatOpponentInPalace ? (
-              <PalaceDisplay palace={chatOpponent.palace} mini />
+              <PalaceDisplay palace={chatOpponent.palace} mini showRotation />
             ) : (
               <span className="bg-white/20 text-green-100 px-1.5 py-0.5 rounded-full text-[9px] font-medium">
                 Hand: {chatOpponent.hand.length}
@@ -847,35 +847,39 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             )}
           </div>
 
-          {/* Last played info */}
-          {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (() => {
-            const lastPlayedStatsText = formatStatsText(lastPlayedPlayer.stats);
-            return (
-              <div className="border-t border-white/10 px-2 py-1">
-                <div className="text-[8px] text-green-400 leading-tight">Last played:</div>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
-                  <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
-                </div>
-                {lastPlayedStatsText && (
-                  <div className="text-[8px] text-yellow-300 mt-0.5">{lastPlayedStatsText}</div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Align toggle */}
-          <div className="flex justify-end px-1.5 pb-1.5">
-            <button
-              onClick={() => setChatAlign(a => a === 'right' ? 'left' : 'right')}
-              className="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 active:scale-90 transition-all"
-              title={`Move to ${chatAlign === 'right' ? 'left' : 'right'}`}
-            >
-              {chatAlign === 'right'
-                ? <AlignLeft className="w-3 h-3 text-green-300" />
-                : <AlignRight className="w-3 h-3 text-green-300" />
-              }
-            </button>
+          {/* Last played info + align toggle */}
+          <div className="border-t border-white/10 px-2 py-1">
+            <div className="flex items-center justify-between">
+              {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId ? (
+                <span className="text-[8px] text-green-400 leading-tight">Last played:</span>
+              ) : (
+                <span />
+              )}
+              <button
+                onClick={() => setChatAlign(a => a === 'right' ? 'left' : 'right')}
+                className="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 active:scale-90 transition-all shrink-0"
+                title={`Move to ${chatAlign === 'right' ? 'left' : 'right'}`}
+              >
+                {chatAlign === 'right'
+                  ? <AlignLeft className="w-3 h-3 text-green-300" />
+                  : <AlignRight className="w-3 h-3 text-green-300" />
+                }
+              </button>
+            </div>
+            {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (() => {
+              const lastPlayedStatsText = formatStatsText(lastPlayedPlayer.stats);
+              return (
+                <>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
+                    <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
+                  </div>
+                  {lastPlayedStatsText && (
+                    <div className="text-[8px] text-yellow-300 mt-0.5">{lastPlayedStatsText}</div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -934,7 +938,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="relative z-[1] flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-visible">
+      <div className={`relative z-[1] flex-1 flex flex-col items-center ${chatMode ? 'justify-end' : 'justify-center'} gap-2 px-3 min-h-0 overflow-visible`}>
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />

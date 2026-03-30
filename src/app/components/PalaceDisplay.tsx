@@ -18,10 +18,19 @@ interface PalaceDisplayProps {
   playableCardIds?: string[];
 }
 
-// Deterministic rotation per slot index
-function getSlotRotation(slotIndex: number, layer: string): number {
-  const seed = slotIndex * 7 + (layer === 'up' ? 13 : 37);
-  return ((seed * 2654435761 >>> 0) % 1000) / 1000 * 5; // 0 to 5 degrees
+// Deterministic rotation seeded by card identity (produces different angles per card)
+function seededRandom(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return ((hash & 0x7fffffff) % 1000) / 1000;
+}
+
+function getCardRotation(cardId: string, range: number = 6): number {
+  const r = seededRandom(cardId);
+  return (r * range * 2) - range; // -range to +range degrees
 }
 
 export function PalaceDisplay({
@@ -61,8 +70,8 @@ export function PalaceDisplay({
       )}
       <div className={`flex ${mini ? 'gap-3' : 'gap-3'}`}>
         {palace.map((slot, i) => {
-          const faceUpRot = showRotation ? getSlotRotation(i, 'up') : 0;
-          const faceDownRot = showRotation ? getSlotRotation(i, 'down') : 0;
+          const faceUpRot = showRotation && slot.faceUp ? getCardRotation(slot.faceUp.id) : 0;
+          const faceDownRot = showRotation && slot.faceDown ? getCardRotation('fd-' + i) : 0;
           const isFaceUpPlayable = !slot.faceUp || !playableCardIds || playableCardIds.includes(slot.faceUp.id);
           return (
             <div key={i} className="flex flex-col-reverse items-center">
