@@ -869,7 +869,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="relative z-[1] flex-1 flex flex-col items-center justify-center gap-2 px-3 min-h-0 overflow-visible">
+      <div className="relative z-[1] flex-1 flex flex-col items-center justify-end gap-2 px-3 min-h-0 overflow-visible">
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
