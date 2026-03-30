@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
-import { Video, AlignLeft, AlignRight } from 'lucide-react';
+import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
@@ -100,6 +100,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
+  const [handPage, setHandPage] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,6 +133,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [gameState.log.length]);
+
+  // Reset hand page when hand size changes
+  useEffect(() => {
+    setHandPage(0);
+  }, [me.hand.length]);
 
   // Handle animations based on lastAction
   useEffect(() => {
@@ -522,7 +528,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     ...(nextOpponent ? [nextOpponent] : []),
     ...otherOpponents,
   ];
-  const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
+  // Smart sort: during player's turn, playable cards first, then unplayable; otherwise rank order
+  const sortedHand = (() => {
+    const ranked = [...me.hand].sort((a, b) => a.rank - b.rank);
+    if (isMyTurn && isPlaying && source === 'hand') {
+      const playable = ranked.filter(c => playableCardIds.includes(c.id));
+      const unplayable = ranked.filter(c => !playableCardIds.includes(c.id));
+      return [...playable, ...unplayable];
+    }
+    return ranked;
+  })();
+
+  // Hand pagination: split into pages of 10 when hand is large
+  const CARDS_PER_PAGE = 10;
+  const totalHandPages = Math.ceil(sortedHand.length / CARDS_PER_PAGE);
+  const pagedHand = sortedHand.length > CARDS_PER_PAGE
+    ? sortedHand.slice(handPage * CARDS_PER_PAGE, (handPage + 1) * CARDS_PER_PAGE)
+    : sortedHand;
 
   // Chat View: the active opponent whose turn it is (skip local player)
   const chatOpponent = isPlaying
@@ -544,7 +566,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     : false;
 
   // Hand grid: fill rows first; 1 row for ≤6 cards, 2 rows for more (scroll horizontally)
-  const displayCardCount = isSetup ? me.setupCards.length : sortedHand.length;
+  const displayCardCount = isSetup ? me.setupCards.length : pagedHand.length;
   const useDoubleRow = displayCardCount > 6;
   const handGridCols = useDoubleRow ? Math.ceil(displayCardCount / 2) : Math.max(1, displayCardCount);
 
@@ -1205,7 +1227,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 </motion.div>
               );
             })}
-            {isPlaying && source === 'hand' && sortedHand.map(card => {
+            {isPlaying && source === 'hand' && pagedHand.map(card => {
               const isPlayable = playableCardIds.includes(card.id);
               const isSelected = selectedCards.includes(card.id);
               const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;
@@ -1228,6 +1250,28 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             })}
             </div>
           </div>
+          {/* Hand pagination arrows */}
+          {isPlaying && source === 'hand' && totalHandPages > 1 && (
+            <div className="flex items-center justify-center gap-3 py-1">
+              <button
+                onClick={() => setHandPage(p => Math.max(0, p - 1))}
+                disabled={handPage === 0}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-all active:scale-90"
+              >
+                <ChevronLeft className="w-4 h-4 text-green-300" />
+              </button>
+              <span className="text-[10px] text-green-200 font-medium">
+                {handPage + 1} / {totalHandPages}
+              </span>
+              <button
+                onClick={() => setHandPage(p => Math.min(totalHandPages - 1, p + 1))}
+                disabled={handPage >= totalHandPages - 1}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-all active:scale-90"
+              >
+                <ChevronRight className="w-4 h-4 text-green-300" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Hand count chip - below hand cards, above action buttons */}
