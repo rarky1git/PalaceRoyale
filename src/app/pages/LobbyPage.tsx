@@ -192,7 +192,7 @@ export default function LobbyPage() {
         {players.map((p, i) => (
           <div key={p.id} className="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-xl">
             <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-lg">
-              {p.emoji || playerEmojiMap[p.id] || p.name[0]}
+              {p.emoji || playerEmojiMap[p.id] || DEFAULT_EMOJI_FALLBACK}
             </div>
             <span className="font-medium">{p.name}</span>
             {i === 0 && <span className="text-[10px] bg-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded-full ml-auto">Host</span>}
