@@ -74,7 +74,7 @@ const GROUPS: { title: string; keys: Array<keyof GameSettings> }[] = [
 export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { settings, toggleSetting } = useSettings();
-  const fullscreenAvailable = typeof document !== 'undefined' && !!document.fullscreenEnabled;
+  const fullscreenAvailable = !!document.fullscreenEnabled;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-start p-6 text-white">
