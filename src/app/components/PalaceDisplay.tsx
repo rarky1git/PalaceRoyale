@@ -21,7 +21,7 @@ interface PalaceDisplayProps {
 // Deterministic rotation per slot index
 function getSlotRotation(slotIndex: number, layer: string): number {
   const seed = slotIndex * 7 + (layer === 'up' ? 13 : 37);
-  return ((seed * 2654435761 >>> 0) % 1000) / 1000 * 6 - 3; // -3 to 3 degrees
+  return ((seed * 2654435761 >>> 0) % 1000) / 1000 * 5; // 0 to 5 degrees
 }
 
 export function PalaceDisplay({

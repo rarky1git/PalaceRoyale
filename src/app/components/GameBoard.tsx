@@ -64,6 +64,13 @@ function formatStatsText(stats: PlayerStats | undefined): string | undefined {
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
+function getSourceStatusLabel(source: ReturnType<typeof getPlayerSource>, isEliminated: boolean, playerId: string, eliminated: string[]): string {
+  if (source === 'palace-faceup') return 'Play from palace face-up cards';
+  if (source === 'palace-facedown') return 'Play from palace face-down (blind)';
+  if (isEliminated) return getRankLabel(playerId, eliminated);
+  return 'No cards!';
+}
+
 function seededRandom(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -813,7 +820,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Chat View — floating opponent overlay */}
       {isPlaying && chatMode && chatOpponent && (
         <div
-          className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} w-32 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
+          className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} min-w-36 w-44 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
           style={{ maxWidth: 'calc(50% - 1rem)' }}
         >
           {/* Opponent info */}
@@ -1178,7 +1185,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           )}
           {isPlaying && source !== 'hand' && me.hand.length === 0 && (
             <span className="text-green-400 text-xs italic py-1">
-              {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
+              {getSourceStatusLabel(source, isEliminated, myPlayerId, gameState.eliminated || [])}
             </span>
           )}
           <div className="overflow-visible w-full">
@@ -1413,7 +1420,7 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
         </span>
       ) : (
         <>
-          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
+          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} showRotation />
           <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
             {isEliminated ? (
               <span className="text-[9px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
