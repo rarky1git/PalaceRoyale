@@ -54,6 +54,7 @@ export interface GameState {
   } | null; // Next player can counter a draw bonus by playing a valid card
   nudgeCount?: number; // Incremented when a non-current player nudges the current player
   newGameRequested?: string[]; // Player IDs that have requested a new game (multiplayer)
+  numberOfDecks?: number; // Number of decks used in this game (persists across resets)
 }
 
 // ---- Helpers ----
@@ -183,6 +184,7 @@ export function initGame(playerNames: string[], dealerIndex: number = 0, numberO
     drawBonus: null,
     pendingCounter: null,
     nudgeCount: 0,
+    numberOfDecks: clampedDecks,
   };
 }
 
@@ -1492,7 +1494,7 @@ export function revealFaceDownCards(state: GameState, playerId: string): GameSta
 }
 
 // Reset game for rematch — same players, new deal. Loser deals.
-export function resetGame(state: GameState, numberOfDecks: number = 1): GameState {
+export function resetGame(state: GameState, numberOfDecks: number = state.numberOfDecks ?? 1): GameState {
   const playerNames = state.players.map(p => p.name);
   const playerEmojis = state.players.map(p => p.emoji || '🦆');
   const playerStats = state.players.map(p => p.stats);
