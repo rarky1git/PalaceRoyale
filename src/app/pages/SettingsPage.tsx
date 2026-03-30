@@ -74,6 +74,7 @@ const GROUPS: { title: string; keys: Array<keyof GameSettings> }[] = [
 export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { settings, toggleSetting } = useSettings();
+  const fullscreenAvailable = !!document.fullscreenEnabled;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-start p-6 text-white">
@@ -97,7 +98,8 @@ export const SettingsPage: React.FC = () => {
       {/* Settings groups */}
       <div className="flex flex-col gap-5 w-full max-w-xs">
         {GROUPS.map(group => {
-          const rows = SETTING_ROWS.filter(r => group.keys.includes(r.key));
+          const rows = SETTING_ROWS.filter(r => group.keys.includes(r.key) && (r.key !== 'fullscreenMode' || fullscreenAvailable));
+          if (rows.length === 0) return null;
           return (
             <div key={group.title}>
               <h2 className="text-xs uppercase tracking-widest text-green-400 mb-2 pl-1">
