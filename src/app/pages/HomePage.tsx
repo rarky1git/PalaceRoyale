@@ -319,7 +319,7 @@ export default function HomePage() {
               <Sparkles className="w-6 h-6 text-yellow-300 shrink-0" />
               <div className="text-left flex-1">
                 <div className="font-bold text-yellow-100">What's New in v{APP_VERSION}</div>
-                <div className="text-xs text-yellow-300">Chat View & Version History</div>
+                <div className="text-xs text-yellow-300">Tutorial, paginated hand & more</div>
               </div>
               <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full shrink-0">NEW</span>
             </button>
