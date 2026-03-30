@@ -300,7 +300,7 @@ export default function HomePage() {
         </div>
         <div className="text-left">
           <h1 className="text-3xl font-bold tracking-tight">Palace Royale</h1>
-          <p className="text-green-300 text-sm">Fight to the last card.</p>
+          <p className="text-green-300 text-sm">A knight with no cards fears nothing.</p>
         </div>
       </div>
 
