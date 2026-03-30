@@ -1,11 +1,88 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles } from 'lucide-react';
+import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles, GraduationCap, X } from 'lucide-react';
 import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
 import { WHATS_NEW_SEEN_KEY, APP_VERSION } from './WhatsNewPage';
+import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
 const STATS_KEY = 'palace-stats';
+
+/** Swipeable tutorial banner shown to first-time players */
+function TutorialBanner({ onStart, onDismiss }: { onStart: () => void; onDismiss: () => void }) {
+  // Track horizontal drag offset for swipe-to-reveal-dismiss
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+
+  const SWIPE_THRESHOLD = 60; // px to reveal the dismiss button
+  const revealed = Math.abs(dragX) >= SWIPE_THRESHOLD;
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    startXRef.current = e.clientX;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const delta = e.clientX - startXRef.current;
+    // Allow drag in both directions, clamped to ±110px
+    setDragX(Math.max(-110, Math.min(110, delta)));
+  };
+
+  const onPointerUp = () => {
+    setIsDragging(false);
+    if (!revealed) {
+      // Snap back if not dragged far enough
+      setDragX(0);
+    }
+    // If revealed, keep offset so dismiss button stays visible
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl w-full">
+      {/* Dismiss button revealed by swiping */}
+      <div
+        className={`absolute inset-y-0 flex items-center justify-center transition-opacity ${
+          dragX > 0 ? 'right-0 pr-3' : 'left-0 pl-3'
+        } ${revealed ? 'opacity-100' : 'opacity-0'}`}
+        style={{ width: 64 }}
+      >
+        <button
+          onClick={onDismiss}
+          className="w-10 h-10 rounded-full bg-red-500/80 flex items-center justify-center text-white hover:bg-red-400 active:scale-90 transition-all"
+          aria-label="Dismiss tutorial"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Main banner — slides with drag */}
+      <div
+        className="touch-pan-y select-none flex items-center gap-3 w-full px-5 py-4 bg-yellow-500/20 border border-yellow-400/40 backdrop-blur rounded-xl hover:bg-yellow-500/30 active:scale-[0.98] cursor-pointer"
+        style={{
+          transform: `translateX(${dragX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.25s ease',
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onClick={() => {
+          if (Math.abs(dragX) < 10) onStart();
+        }}
+      >
+        <GraduationCap className="w-6 h-6 text-yellow-300 shrink-0" />
+        <div className="text-left flex-1">
+          <div className="font-bold text-yellow-100">Learn to Play</div>
+          <div className="text-xs text-yellow-300">Guided tutorial — swipe to dismiss</div>
+        </div>
+        <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full shrink-0">START</span>
+      </div>
+    </div>
+  );
+}
 
 function formatShortDateTime(ts?: number): string {
   if (!ts) return '';
@@ -24,7 +101,9 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [playerCount, setPlayerCount] = useState(2);
   const [deckCount, setDeckCount] = useState(1);
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(() => {
+    try { return localStorage.getItem('palace-player-name') || ''; } catch { return ''; }
+  });
   const [playerEmoji, setPlayerEmoji] = useState(() => {
     try { return localStorage.getItem('palace-player-emoji') || '🦆'; } catch { return '🦆'; }
   });
@@ -39,6 +118,23 @@ export default function HomePage() {
   const [showWhatsNew] = useState<boolean>(() => {
     try { return localStorage.getItem(WHATS_NEW_SEEN_KEY) !== APP_VERSION; } catch { return false; }
   });
+
+  // True for first-time players who haven't dismissed or completed the tutorial
+  const [showTutorial, setShowTutorial] = useState<boolean>(() => {
+    try {
+      const val = localStorage.getItem(TUTORIAL_SEEN_KEY);
+      return val === null; // show only if key has never been set
+    } catch { return false; }
+  });
+
+  const handleTutorialStart = () => {
+    navigate('/robot', { state: { tutorial: true } });
+  };
+
+  const handleTutorialDismiss = () => {
+    try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'dismissed'); } catch { /* ignore */ }
+    setShowTutorial(false);
+  };
 
   // Auto-focus the custom emoji input when it becomes visible
   useEffect(() => {
@@ -122,6 +218,7 @@ export default function HomePage() {
 
   const startRobot = () => {
     if (!playerName.trim()) return;
+    try { localStorage.setItem('palace-player-name', playerName.trim()); } catch { /* ignore */ }
     const names = [playerName.trim()];
     const emojis = [playerEmoji];
 
@@ -137,6 +234,7 @@ export default function HomePage() {
 
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
+    try { localStorage.setItem('palace-player-name', playerName.trim()); } catch { /* ignore */ }
     if (multiAction === 'create') {
       navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount, deckCount } });
     } else {
@@ -194,17 +292,24 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-center p-6 text-white">
-      <div className="flex flex-col items-center gap-2 mb-8">
-        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg">
+    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center p-6 text-white">
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
+      <div className="flex flex-row items-center gap-4 mb-8 w-full max-w-xs">
+        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
           <Crown className="w-9 h-9 text-yellow-900" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Palace</h1>
-        <p className="text-green-300 text-sm">The Card Game</p>
+        <div className="text-left">
+          <h1 className="text-3xl font-bold tracking-tight">Palace Royale</h1>
+          <p className="text-green-300 text-sm">A knight with no cards fears nothing.</p>
+        </div>
       </div>
 
       {mode === 'menu' && (
         <div className="flex flex-col gap-3 w-full max-w-xs">
+          {/* Tutorial banner — shown to first-time players */}
+          {showTutorial && (
+            <TutorialBanner onStart={handleTutorialStart} onDismiss={handleTutorialDismiss} />
+          )}
           {/* What's New banner — shown only when user hasn't seen current version's notes */}
           {showWhatsNew && (
             <button
@@ -214,7 +319,7 @@ export default function HomePage() {
               <Sparkles className="w-6 h-6 text-yellow-300 shrink-0" />
               <div className="text-left flex-1">
                 <div className="font-bold text-yellow-100">What's New in v{APP_VERSION}</div>
-                <div className="text-xs text-yellow-300">Chat View & Version History</div>
+                <div className="text-xs text-yellow-300">Tutorial, paginated hand & more</div>
               </div>
               <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full shrink-0">NEW</span>
             </button>
@@ -430,7 +535,8 @@ export default function HomePage() {
           </button>
         </div>
       )}
-      <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
+      </div>
+      <footer className="mt-4 text-green-600 text-[11px] font-mono select-none">
         {`v${APP_VERSION}`}
       </footer>
     </div>

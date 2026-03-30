@@ -180,7 +180,87 @@ function ChatViewMockup() {
   );
 }
 
+// ---- v0.7.0 helper mockups ----
+
+function TutorialMockup() {
+  return (
+    <div className="flex items-center gap-3 bg-yellow-500/20 border border-yellow-400/40 rounded-xl px-4 py-3">
+      <span className="text-2xl">🎓</span>
+      <div className="flex-1 text-left">
+        <div className="font-bold text-yellow-100 text-xs">Learn to Play</div>
+        <div className="text-[10px] text-yellow-300">Guided tutorial — swipe to dismiss</div>
+      </div>
+      <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">START</span>
+    </div>
+  );
+}
+
+function PaginatedHandMockup() {
+  return (
+    <div className="flex flex-col items-center gap-2 bg-white/5 rounded-xl p-3">
+      <div className="flex gap-1 items-center">
+        <span className="text-green-400 text-lg">‹</span>
+        {[...'AKQJ1098'].map((r, i) => (
+          <div key={i} className="w-7 h-9 rounded bg-white border border-gray-300 flex items-center justify-center text-[9px] font-bold text-gray-800">{r}</div>
+        ))}
+        <span className="text-green-400 text-lg">›</span>
+      </div>
+      <div className="text-[10px] text-green-400 font-semibold">1 / 2</div>
+    </div>
+  );
+}
+
 // ---- Version content components ----
+
+export function V070Content() {
+  return (
+    <>
+      <FeatureSection emoji="🎓" title="Interactive Tutorial">
+        <p>First-time players are greeted with a swipeable <strong className="text-white">Learn to Play</strong> banner on the home screen. Tapping it launches a guided game that walks through special cards, bonus turns, palace mechanics, and end-game scenarios step by step.</p>
+        <TutorialMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="yellow">First-time players</Chip>
+          <Chip color="green">Swipe to dismiss</Chip>
+          <Chip color="blue">Replayable in Settings</Chip>
+        </div>
+        <p>Swipe the banner to reveal a dismiss button. Once completed or dismissed, the tutorial can always be replayed from the <strong className="text-white">Settings</strong> page.</p>
+      </FeatureSection>
+
+      <FeatureSection emoji="📹" title="Chat View in Single-Player">
+        <p>The <strong className="text-white">📹 Chat View</strong> floating opponent overlay — previously available only in online multiplayer — now works in all game modes, including solo robot games. Tap the camera icon above your hand to toggle it during any match.</p>
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="purple">All game modes</Chip>
+          <Chip color="blue">Auto-tracks turns</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="🃏" title="Paginated Hand & Smart Sorting">
+        <p>When your hand exceeds <strong className="text-white">10 cards</strong>, it splits into pages with left/right chevron navigation. On your turn, <strong className="text-green-300">playable cards</strong> are automatically sorted to the front so you can act faster.</p>
+        <PaginatedHandMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="green">Playable cards first</Chip>
+          <Chip color="yellow">Page indicator</Chip>
+          <Chip color="blue">Auto-resets on hand change</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="💾" title="Player Name Persistence">
+        <p>Your name is now <strong className="text-white">saved automatically</strong> when you start a game and pre-filled on your next visit. No more retyping your name every session.</p>
+      </FeatureSection>
+
+      <FeatureSection emoji="✨" title="Polish & Bug Fixes">
+        <p><strong className="text-white">Card setup animations</strong> — selecting palace cards now animates with a subtle tilt and lift. <strong className="text-white">Selected card glow</strong> adds a yellow shadow highlight during setup. <strong className="text-white">Opponent palace rotations</strong> give each opponent's palace a unique, deterministic tilt.</p>
+        <p><strong className="text-white">Particle effects</strong> now correctly respect the toggle in Settings — two cases where animations fired regardless of the setting have been fixed.</p>
+        <p>The <strong className="text-white">Home Page</strong> received a layout refresh: horizontal crown + title row, left-aligned content, and a new tagline. The footer no longer overlaps page content on taller screens.</p>
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="orange">Bug fix</Chip>
+          <Chip color="green">Visual polish</Chip>
+          <Chip color="yellow">UI improvements</Chip>
+        </div>
+      </FeatureSection>
+    </>
+  );
+}
 
 export function V061Content() {
   return (
@@ -294,6 +374,12 @@ export interface VersionEntry {
  * Add new entries to the TOP of this array with each release.
  */
 export const VERSION_HISTORY: VersionEntry[] = [
+  {
+    version: '0.7.0',
+    date: 'March 2026',
+    summary: 'Interactive tutorial, paginated hand, chat view everywhere & polish',
+    Content: V070Content,
+  },
   {
     version: '0.6.1',
     date: 'March 2026',

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
-import { Video, AlignLeft, AlignRight } from 'lucide-react';
+import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
@@ -22,6 +22,7 @@ import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
 import { useSettings } from '../contexts/SettingsContext';
+import { TutorialOverlay, TUTORIAL_STEPS, TUTORIAL_SEEN_KEY } from './TutorialOverlay';
 
 // Seeded random per card ID for consistent rotations
 const DEFAULT_EMOJI = '🦆';
@@ -63,6 +64,13 @@ function formatStatsText(stats: PlayerStats | undefined): string | undefined {
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
+function getSourceStatusLabel(source: ReturnType<typeof getPlayerSource>, isEliminated: boolean, playerId: string, eliminated: string[]): string {
+  if (source === 'palace-faceup') return 'Play from palace face-up cards';
+  if (source === 'palace-facedown') return 'Play from palace face-down (blind)';
+  if (isEliminated) return getRankLabel(playerId, eliminated);
+  return 'No cards!';
+}
+
 function seededRandom(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -83,19 +91,23 @@ interface GameBoardProps {
   onStateChange: (state: GameState) => void;
   isMultiplayer?: boolean;
   playerEmoji?: string; // Local player's chosen emoji (for multiplayer emoji sync)
+  tutorialMode?: boolean; // When true, show step-by-step tutorial overlay
 }
 
-export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji }: GameBoardProps) {
+export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji, tutorialMode = false }: GameBoardProps) {
   const navigate = useNavigate();
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  // Tutorial step: 0 = hidden, 1..N = active step
+  const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
+  const [handPage, setHandPage] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,6 +141,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [gameState.log.length]);
 
+  // Reset hand page when hand size changes
+  useEffect(() => {
+    setHandPage(0);
+  }, [me.hand.length]);
+
   // Handle animations based on lastAction
   useEffect(() => {
     if (gameState.version !== prevVersionRef.current) {
@@ -156,12 +173,14 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3000);
         }
       }
-      if (action?.type === 'palace-invalid' && action.cards?.[0]) {
+      if (settings.particleEffects && action?.type === 'palace-invalid' && action.cards?.[0]) {
         const playerName = gameState.players.find(p => p.id === action.playerId)?.name ?? '';
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setPalaceValidCard(null);
-        setAnimEffect('palace-invalid');
+        if (settings.particleEffects) {
+          setAnimEffect('palace-invalid');
+        }
         if (palaceValidTimerRef.current) { clearTimeout(palaceValidTimerRef.current); palaceValidTimerRef.current = null; }
         if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
         palaceInvalidTimerRef.current = setTimeout(() => {
@@ -183,6 +202,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
   // Detect valid palace face-down reveal and trigger palace-valid animEffect
   useEffect(() => {
+    if (!settings.particleEffects) return;
     if (gameState.lastAction?.type !== 'play') return;
     const actingPlayer = gameState.players.find(p => p.id === gameState.lastAction?.playerId);
     if (!actingPlayer) return;
@@ -194,7 +214,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       const card = gameState.lastAction.cards[0];
       setPalaceInvalidCard(null);
       setPalaceInvalidPlayerName('');
-      setAnimEffect('palace-valid');
+      if (settings.particleEffects) {
+        setAnimEffect('palace-valid');
+      }
       setPalaceValidCard(card);
       if (palaceInvalidTimerRef.current) { clearTimeout(palaceInvalidTimerRef.current); palaceInvalidTimerRef.current = null; }
       if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
@@ -205,7 +227,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       }, 1500);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.lastAction, gameState.version]);
+  }, [gameState.lastAction, gameState.version, settings.particleEffects]);
 
   // Only clear selections when it's not setup phase in multiplayer, or when the turn changes
   useEffect(() => {
@@ -513,7 +535,23 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     ...(nextOpponent ? [nextOpponent] : []),
     ...otherOpponents,
   ];
-  const sortedHand = [...me.hand].sort((a, b) => a.rank - b.rank);
+  // Smart sort: during player's turn, playable cards first, then unplayable; otherwise rank order
+  const sortedHand = (() => {
+    const ranked = [...me.hand].sort((a, b) => a.rank - b.rank);
+    if (isMyTurn && isPlaying && source === 'hand') {
+      const playable = ranked.filter(c => playableCardIds.includes(c.id));
+      const unplayable = ranked.filter(c => !playableCardIds.includes(c.id));
+      return [...playable, ...unplayable];
+    }
+    return ranked;
+  })();
+
+  // Hand pagination: split into pages of 10 when hand is large
+  const CARDS_PER_PAGE = 10;
+  const totalHandPages = Math.ceil(sortedHand.length / CARDS_PER_PAGE);
+  const pagedHand = sortedHand.length > CARDS_PER_PAGE
+    ? sortedHand.slice(handPage * CARDS_PER_PAGE, (handPage + 1) * CARDS_PER_PAGE)
+    : sortedHand;
 
   // Chat View: the active opponent whose turn it is (skip local player)
   const chatOpponent = isPlaying
@@ -535,12 +573,29 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     : false;
 
   // Hand grid: fill rows first; 1 row for ≤6 cards, 2 rows for more (scroll horizontally)
-  const displayCardCount = isSetup ? me.setupCards.length : sortedHand.length;
+  const displayCardCount = isSetup ? me.setupCards.length : pagedHand.length;
   const useDoubleRow = displayCardCount > 6;
   const handGridCols = useDoubleRow ? Math.ceil(displayCardCount / 2) : Math.max(1, displayCardCount);
 
   // Pile cards for display (show up to 5 beneath top card)
   const pileCards = gameState.pickupPile.slice(-6);
+
+  // Tutorial handlers
+  const totalTutorialSteps = TUTORIAL_STEPS.length;
+  const handleTutorialNext = () => {
+    if (tutorialStep >= totalTutorialSteps) {
+      // Tutorial complete
+      try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* ignore */ }
+      setTutorialStep(0);
+    } else {
+      setTutorialStep(s => s + 1);
+    }
+  };
+  const handleTutorialSkip = () => {
+    // Skip/dismiss mid-tutorial also marks as seen
+    try { localStorage.setItem(TUTORIAL_SEEN_KEY, 'true'); } catch { /* ignore */ }
+    setTutorialStep(0);
+  };
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-green-900 to-green-800 text-white overflow-visible relative">
@@ -550,6 +605,16 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         animate={{ opacity: turnFlash ? 0.3 : 0 }}
         transition={{ duration: 0.5 }}
       />
+      {/* Tutorial overlay — shown during guided tutorial mode */}
+      {tutorialMode && tutorialStep > 0 && (
+        <TutorialOverlay
+          step={tutorialStep}
+          totalSteps={totalTutorialSteps}
+          onNext={handleTutorialNext}
+          onSkip={handleTutorialSkip}
+        />
+      )}
+
       {/* Emoji waterfall — background layer, behind all game components */}
       <AnimatePresence>
         {(animEffect === 'wipeout' || animEffect === 'slam' || animEffect === 'sparkle') && animEmoji && (
@@ -752,10 +817,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
-      {/* Chat View — floating opponent overlay (multiplayer only) */}
-      {isMultiplayer && isPlaying && chatMode && chatOpponent && (
+      {/* Chat View — floating opponent overlay */}
+      {isPlaying && chatMode && chatOpponent && (
         <div
-          className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} w-32 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
+          className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} min-w-36 w-44 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
           style={{ maxWidth: 'calc(50% - 1rem)' }}
         >
           {/* Opponent info */}
@@ -772,9 +837,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
 
           {/* Palace (only when in palace phase) or hand count */}
-          <div className="px-2 pb-1">
+          <div className="px-2 py-px">
             {chatOpponentInPalace ? (
-              <PalaceDisplay palace={chatOpponent.palace} mini />
+              <PalaceDisplay palace={chatOpponent.palace} mini showRotation />
             ) : (
               <span className="bg-white/20 text-green-100 px-1.5 py-0.5 rounded-full text-[9px] font-medium">
                 Hand: {chatOpponent.hand.length}
@@ -782,42 +847,46 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             )}
           </div>
 
-          {/* Last played info */}
-          {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (() => {
-            const lastPlayedStatsText = formatStatsText(lastPlayedPlayer.stats);
-            return (
-              <div className="border-t border-white/10 px-2 py-1">
-                <div className="text-[8px] text-green-400 leading-tight">Last played:</div>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
-                  <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
-                </div>
-                {lastPlayedStatsText && (
-                  <div className="text-[8px] text-yellow-300 mt-0.5">{lastPlayedStatsText}</div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Align toggle */}
-          <div className="flex justify-end px-1.5 pb-1.5">
-            <button
-              onClick={() => setChatAlign(a => a === 'right' ? 'left' : 'right')}
-              className="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 active:scale-90 transition-all"
-              title={`Move to ${chatAlign === 'right' ? 'left' : 'right'}`}
-            >
-              {chatAlign === 'right'
-                ? <AlignLeft className="w-3 h-3 text-green-300" />
-                : <AlignRight className="w-3 h-3 text-green-300" />
-              }
-            </button>
+          {/* Last played info + align toggle */}
+          <div className="border-t border-white/10 px-2 py-1">
+            <div className="flex items-center justify-between">
+              {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId ? (
+                <span className="text-[8px] text-green-400 leading-tight">Last played:</span>
+              ) : (
+                <span />
+              )}
+              <button
+                onClick={() => setChatAlign(a => a === 'right' ? 'left' : 'right')}
+                className="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 active:scale-90 transition-all shrink-0"
+                title={`Move to ${chatAlign === 'right' ? 'left' : 'right'}`}
+              >
+                {chatAlign === 'right'
+                  ? <AlignLeft className="w-3 h-3 text-green-300" />
+                  : <AlignRight className="w-3 h-3 text-green-300" />
+                }
+              </button>
+            </div>
+            {lastPlayedPlayer && lastPlayedPlayer.id !== myPlayerId && (() => {
+              const lastPlayedStatsText = formatStatsText(lastPlayedPlayer.stats);
+              return (
+                <>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[11px]">{lastPlayedPlayer.emoji || DEFAULT_EMOJI}</span>
+                    <span className="text-[9px] text-white font-medium truncate">{lastPlayedPlayer.name}</span>
+                  </div>
+                  {lastPlayedStatsText && (
+                    <div className="text-[8px] text-yellow-300 mt-0.5">{lastPlayedStatsText}</div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
 
       {/* Opponents area — hidden when chat mode is active */}
       <div
-        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${isMultiplayer && chatMode ? 'hidden' : ''}`}
+        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${chatMode ? 'hidden' : ''}`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {prevOpponent && (
@@ -869,7 +938,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       </div>
 
       {/* Middle area: piles + log */}
-      <div className="relative z-[1] flex-1 flex flex-col items-center justify-end gap-2 px-3 min-h-0 overflow-visible">
+      <div className={`relative z-[1] flex-1 flex flex-col items-center ${chatMode ? 'justify-end' : 'justify-center'} gap-2 px-3 min-h-0 overflow-visible`}>
         {/* Piles - larger */}
         <div className="flex items-center gap-6">
           <CardStack count={gameState.drawPile.length} label="Draw" />
@@ -1049,8 +1118,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
-      {/* Chat View toggle — shown above My area in multiplayer during play */}
-      {isMultiplayer && isPlaying && (
+      {/* Chat View toggle — shown above My area during play */}
+      {isPlaying && (
         <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
           <button
             onClick={() => setChatMode(v => !v)}
@@ -1101,37 +1170,31 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
         {/* My Hand / Setup Cards - 2-row grid */}
         <div className="flex flex-col items-center gap-1 overflow-visible">
-          {/* Hand label row */}
-          <div className="flex items-center justify-between w-full px-1">
-            <div className="w-7" />
-            <div className="flex-1 flex justify-center">
-              {isPlaying && source === 'hand' ? (
-                <span className="bg-white/15 text-green-200 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                  Hand ({me.hand.length})
-                </span>
-              ) : (
+          {/* Setup label row (only shown during setup phase) */}
+          {isSetup && (
+            <div className="flex items-center justify-between w-full px-1">
+              <div className="w-7" />
+              <div className="flex-1 flex justify-center">
                 <span className="text-[10px] text-green-300 font-medium">
-                  {isSetup
-                    ? me.setupPhase === 'select-facedown'
-                      ? 'Your 9 cards (pick 3 blindly)'
-                      : me.setupPhase === 'select-faceup'
-                      ? 'Pick 3 for palace face-up'
-                      : 'Setup complete'
-                    : `Hand (${me.hand.length})`}
+                  {me.setupPhase === 'select-facedown'
+                    ? 'Your 9 cards (pick 3 blindly)'
+                    : me.setupPhase === 'select-faceup'
+                    ? 'Pick 3 for palace face-up'
+                    : 'Setup complete'}
                 </span>
-              )}
+              </div>
+              {/* Spacer to balance the layout */}
+              <div className="w-7" />
             </div>
-            {/* Spacer to balance the layout */}
-            <div className="w-7" />
-          </div>
+          )}
           {isPlaying && source !== 'hand' && me.hand.length === 0 && (
             <span className="text-green-400 text-xs italic py-1">
-              {source === 'palace-faceup' ? 'Play from palace face-up cards' : source === 'palace-facedown' ? 'Play from palace face-down (blind)' : 'No cards!'}
+              {getSourceStatusLabel(source, isEliminated, myPlayerId, gameState.eliminated || [])}
             </span>
           )}
           <div className="overflow-visible w-full">
             <div
-              className="grid gap-1 pt-4 pb-2 mx-auto"
+              className="grid gap-1 pt-4 pb-0.5 mx-auto"
               style={{
                 gridAutoFlow: 'row',
                 gridTemplateRows: useDoubleRow ? 'repeat(2, auto)' : 'auto',
@@ -1139,25 +1202,43 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 width: 'max-content',
               }}
             >
-            {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => (
-              <PlayingCard
-                key={card.id}
-                faceDown
-                small
-                selected={selectedCards.includes(card.id)}
-                onClick={() => toggleCard(card.id)}
-              />
-            ))}
-            {isSetup && me.setupPhase === 'select-faceup' && me.setupCards.map(card => (
-              <PlayingCard
-                key={card.id}
-                card={card}
-                small
-                selected={selectedCards.includes(card.id)}
-                onClick={() => toggleCard(card.id)}
-              />
-            ))}
-            {isPlaying && source === 'hand' && sortedHand.map(card => {
+            {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => {
+              const isSelected = selectedCards.includes(card.id);
+              const selRotation = isSelected ? getCardRotation(card.id + '-sel', 10) : 0;
+              return (
+                <motion.div
+                  key={card.id}
+                  animate={{ rotate: selRotation, y: isSelected ? -8 : 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PlayingCard
+                    faceDown
+                    small
+                    selected={isSelected}
+                    onClick={() => toggleCard(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
+            {isSetup && me.setupPhase === 'select-faceup' && me.setupCards.map(card => {
+              const isSelected = selectedCards.includes(card.id);
+              const selRotation = isSelected ? getCardRotation(card.id + '-sel', 10) : 0;
+              return (
+                <motion.div
+                  key={card.id}
+                  animate={{ rotate: selRotation, y: isSelected ? -8 : 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PlayingCard
+                    card={card}
+                    small
+                    selected={isSelected}
+                    onClick={() => toggleCard(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
+            {isPlaying && source === 'hand' && pagedHand.map(card => {
               const isPlayable = playableCardIds.includes(card.id);
               const isSelected = selectedCards.includes(card.id);
               const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;
@@ -1180,7 +1261,38 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             })}
             </div>
           </div>
+          {/* Hand pagination arrows */}
+          {isPlaying && source === 'hand' && totalHandPages > 1 && (
+            <div className="flex items-center justify-center gap-3 py-1">
+              <button
+                onClick={() => setHandPage(p => Math.max(0, p - 1))}
+                disabled={handPage === 0}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-all active:scale-90"
+              >
+                <ChevronLeft className="w-4 h-4 text-green-300" />
+              </button>
+              <span className="text-[10px] text-green-200 font-medium">
+                {handPage + 1} / {totalHandPages}
+              </span>
+              <button
+                onClick={() => setHandPage(p => Math.min(totalHandPages - 1, p + 1))}
+                disabled={handPage >= totalHandPages - 1}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-all active:scale-90"
+              >
+                <ChevronRight className="w-4 h-4 text-green-300" />
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Hand count chip - below hand cards, above action buttons */}
+        {isPlaying && source === 'hand' && (
+          <div className="flex justify-center">
+            <span className="bg-white/15 text-green-200 px-2 py-px rounded-full text-[10px] font-medium">
+              Hand ({me.hand.length})
+            </span>
+          </div>
+        )}
 
         {/* Action buttons - below hand */}
         {isPlaying && !isFinished && !isEliminated && (
@@ -1296,14 +1408,14 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
 }) {
   return (
-    <div className={`flex flex-col items-center gap-1 p-1.5 min-w-34 max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
+    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
       isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
       isBeforePlayer ? 'bg-purple-500/20' :
       isAfterPlayer ? 'bg-green-500/20' :
       'bg-black/10'
     }`}>
-      <span className="text-[10px] font-bold truncate max-w-26">
+      <span className="text-[10px] font-bold truncate max-w-26 mb-1">
         {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
       {isSetup ? (
@@ -1312,10 +1424,10 @@ function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated
         </span>
       ) : (
         <>
-          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} />
-          <div className="flex items-center gap-1 flex-wrap justify-center">
+          <PalaceDisplay palace={player.palace} small={!mini} mini={mini} showRotation />
+          <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
             {isEliminated ? (
-              <span className="text-[10px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
+              <span className="text-[9px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
             ) : (
               <>
                 {formatStatsText(player.stats) && (

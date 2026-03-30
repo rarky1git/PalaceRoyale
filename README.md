@@ -1,6 +1,6 @@
 # PalaceRoyale
 
-![version](https://img.shields.io/badge/version-0.5.0-yellow)
+![version](https://img.shields.io/badge/version-0.7.0-yellow)
 
 A web-based implementation of the **Palace** card game (also known as Scum or Shed), playable solo against AI or with friends in real-time multiplayer.
 
@@ -56,6 +56,16 @@ npm run build
 | `VITE_SUPABASE_ANON_KEY` | Your Supabase public anon key |
 
 See `.env.example` for the template.
+
+## Update History
+
+### v0.7.0 — March 2026
+
+- **Interactive Tutorial** — First-time players see a swipeable "Learn to Play" banner on the home screen. Tapping it launches a guided game covering special cards (2, 7, 10), bonus turns, palace mechanics, and end-game scenarios. Dismissible by swipe; replayable anytime from Settings.
+- **Chat View in All Game Modes** — The floating opponent overlay (📹) is no longer limited to online multiplayer. It now works in single-player robot games too.
+- **Paginated Hand + Smart Card Sorting** — When your hand exceeds 10 cards it splits into pages with chevron navigation. On your turn, playable cards are automatically sorted to the front for faster decision-making.
+- **Player Name Persistence** — Your name is saved when you start a game and pre-filled on your next visit.
+- **UI Polish & Bug Fixes** — Palace card setup now animates with a tilt and glow. Opponent palace cards display deterministic per-slot rotations. Home page layout refreshed with a horizontal header row and new tagline. Particle effects now correctly respect the Settings toggle (two cases where animations fired unconditionally were fixed).
 
 ## Project Structure
 
