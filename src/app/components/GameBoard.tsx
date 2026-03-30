@@ -171,7 +171,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setPalaceValidCard(null);
-        setAnimEffect('palace-invalid');
+        if (settings.particleEffects) {
+          setAnimEffect('palace-invalid');
+        }
         if (palaceValidTimerRef.current) { clearTimeout(palaceValidTimerRef.current); palaceValidTimerRef.current = null; }
         if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
         palaceInvalidTimerRef.current = setTimeout(() => {
@@ -205,7 +207,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       const card = gameState.lastAction.cards[0];
       setPalaceInvalidCard(null);
       setPalaceInvalidPlayerName('');
-      setAnimEffect('palace-valid');
+      if (settings.particleEffects) {
+        setAnimEffect('palace-valid');
+      }
       setPalaceValidCard(card);
       if (palaceInvalidTimerRef.current) { clearTimeout(palaceInvalidTimerRef.current); palaceInvalidTimerRef.current = null; }
       if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
@@ -806,8 +810,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
-      {/* Chat View — floating opponent overlay (multiplayer only) */}
-      {isMultiplayer && isPlaying && chatMode && chatOpponent && (
+      {/* Chat View — floating opponent overlay */}
+      {isPlaying && chatMode && chatOpponent && (
         <div
           className={`absolute z-20 top-2 ${chatAlign === 'right' ? 'right-2' : 'left-2'} w-32 bg-black/75 border border-white/20 rounded-xl shadow-xl backdrop-blur-sm pointer-events-auto`}
           style={{ maxWidth: 'calc(50% - 1rem)' }}
@@ -871,7 +875,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
 
       {/* Opponents area — hidden when chat mode is active */}
       <div
-        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${isMultiplayer && chatMode ? 'hidden' : ''}`}
+        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${chatMode ? 'hidden' : ''}`}
         onClick={() => setMiniOpponents(v => !v)}
       >
         {prevOpponent && (
@@ -1103,8 +1107,8 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
-      {/* Chat View toggle — shown above My area in multiplayer during play */}
-      {isMultiplayer && isPlaying && (
+      {/* Chat View toggle — shown above My area during play */}
+      {isPlaying && (
         <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
           <button
             onClick={() => setChatMode(v => !v)}
@@ -1187,25 +1191,43 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 width: 'max-content',
               }}
             >
-            {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => (
-              <PlayingCard
-                key={card.id}
-                faceDown
-                small
-                selected={selectedCards.includes(card.id)}
-                onClick={() => toggleCard(card.id)}
-              />
-            ))}
-            {isSetup && me.setupPhase === 'select-faceup' && me.setupCards.map(card => (
-              <PlayingCard
-                key={card.id}
-                card={card}
-                small
-                selected={selectedCards.includes(card.id)}
-                onClick={() => toggleCard(card.id)}
-              />
-            ))}
-            {isPlaying && source === 'hand' && pagedHand.map(card => {
+            {isSetup && me.setupPhase === 'select-facedown' && me.setupCards.map(card => {
+              const isSelected = selectedCards.includes(card.id);
+              const selRotation = isSelected ? getCardRotation(card.id + '-sel', 10) : 0;
+              return (
+                <motion.div
+                  key={card.id}
+                  animate={{ rotate: selRotation, y: isSelected ? -8 : 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PlayingCard
+                    faceDown
+                    small
+                    selected={isSelected}
+                    onClick={() => toggleCard(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
+            {isSetup && me.setupPhase === 'select-faceup' && me.setupCards.map(card => {
+              const isSelected = selectedCards.includes(card.id);
+              const selRotation = isSelected ? getCardRotation(card.id + '-sel', 10) : 0;
+              return (
+                <motion.div
+                  key={card.id}
+                  animate={{ rotate: selRotation, y: isSelected ? -8 : 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PlayingCard
+                    card={card}
+                    small
+                    selected={isSelected}
+                    onClick={() => toggleCard(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
+            {isPlaying && source === 'hand' && sortedHand.map(card => {
               const isPlayable = playableCardIds.includes(card.id);
               const isSelected = selectedCards.includes(card.id);
               const selRotation = isSelected ? getCardRotation(card.id + '-sel', 5) : 0;

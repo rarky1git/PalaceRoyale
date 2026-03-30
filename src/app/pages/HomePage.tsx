@@ -101,7 +101,9 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [playerCount, setPlayerCount] = useState(2);
   const [deckCount, setDeckCount] = useState(1);
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(() => {
+    try { return localStorage.getItem('palace-player-name') || ''; } catch { return ''; }
+  });
   const [playerEmoji, setPlayerEmoji] = useState(() => {
     try { return localStorage.getItem('palace-player-emoji') || '🦆'; } catch { return '🦆'; }
   });
@@ -216,6 +218,7 @@ export default function HomePage() {
 
   const startRobot = () => {
     if (!playerName.trim()) return;
+    try { localStorage.setItem('palace-player-name', playerName.trim()); } catch { /* ignore */ }
     const names = [playerName.trim()];
     const emojis = [playerEmoji];
 
@@ -231,6 +234,7 @@ export default function HomePage() {
 
   const goMultiplayer = () => {
     if (!playerName.trim()) return;
+    try { localStorage.setItem('palace-player-name', playerName.trim()); } catch { /* ignore */ }
     if (multiAction === 'create') {
       navigate('/lobby', { state: { action: 'create', playerName: playerName.trim(), playerEmoji, playerCount, deckCount } });
     } else {
@@ -288,13 +292,16 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-center p-6 text-white">
-      <div className="flex flex-col items-center gap-2 mb-8">
-        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg">
+    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center p-6 text-white">
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
+      <div className="flex flex-row items-center gap-4 mb-8 w-full max-w-xs">
+        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
           <Crown className="w-9 h-9 text-yellow-900" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Palace</h1>
-        <p className="text-green-300 text-sm">The Card Game</p>
+        <div className="text-left">
+          <h1 className="text-3xl font-bold tracking-tight">Palace Royale</h1>
+          <p className="text-green-300 text-sm">A knight with no cards fears nothing.</p>
+        </div>
       </div>
 
       {mode === 'menu' && (
@@ -528,7 +535,8 @@ export default function HomePage() {
           </button>
         </div>
       )}
-      <footer className="absolute bottom-4 text-green-600 text-[11px] font-mono select-none">
+      </div>
+      <footer className="mt-4 text-green-600 text-[11px] font-mono select-none">
         {`v${APP_VERSION}`}
       </footer>
     </div>
