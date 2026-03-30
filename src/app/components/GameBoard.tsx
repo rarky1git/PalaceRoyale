@@ -881,6 +881,24 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               );
             })()}
           </div>
+
+          {/* Eliminated players */}
+          {(gameState.eliminated || []).length > 0 && (
+            <div className="border-t border-white/10 px-2 py-1">
+              <span className="text-[8px] text-green-400 leading-tight">Eliminated:</span>
+              {(gameState.eliminated || []).map((pid) => {
+                const ep = gameState.players.find(p => p.id === pid);
+                if (!ep) return null;
+                return (
+                  <div key={pid} className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[11px]">{ep.emoji || DEFAULT_EMOJI}</span>
+                    <span className="text-[9px] text-white font-medium truncate flex-1">{ep.name}</span>
+                    <span className="text-[8px] text-yellow-300 shrink-0">{getRankLabel(pid, gameState.eliminated)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
