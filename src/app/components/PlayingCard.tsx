@@ -24,7 +24,7 @@ export function PlayingCard({ card, faceDown, selected, onClick, small, mini, di
         disabled={disabled && !onClick}
         className={`${w} ${mini ? 'rounded border' : 'rounded-lg border-2'} flex items-center justify-center cursor-pointer
           ${highlight ? 'border-yellow-400 bg-gradient-to-br from-blue-700 to-blue-900 shadow-lg shadow-yellow-400/50 [box-shadow:0_0_16px_4px_rgba(250,204,21,0.45)] animate-pulse' : 'border-gray-400 bg-gradient-to-br from-blue-600 to-blue-800'}
-          ${selected ? `${mini ? 'ring-1.5' : 'ring-1.5'} ring-yellow-400 -translate-y-2` : ''}
+          ${selected ? 'ring-1.5 ring-yellow-400 -translate-y-2 [box-shadow:0_0_10px_2px_rgba(250,204,21,0.65)]' : ''}
           ${onClick && !disabled ? 'hover:brightness-110 active:scale-95' : ''}
           transition-all shrink-0`}
       >
