@@ -1153,6 +1153,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               centered={palaceIsActive}
               showRotation
               playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
+              isGameOver={isFinished}
             />
           </div>
         )}

@@ -1481,8 +1481,11 @@ export function revealFaceDownCards(state: GameState, playerId: string): GameSta
   const player = s.players.find(p => p.id === playerId);
   if (!player) return s;
   for (const slot of player.palace) {
-    if (slot.faceDown !== null && slot.faceUp === null) {
-      // Move face-down card to face-up slot so PalaceDisplay shows it face-up
+    if (slot.faceDown !== null) {
+      // Move face-down card to face-up slot so PalaceDisplay shows it face-up.
+      // If a face-up card is already present, it is replaced so the previously
+      // hidden face-down card is shown on top (the face-up was already visible
+      // to all players during play).
       slot.faceUp = slot.faceDown;
       slot.faceDown = null;
     }
