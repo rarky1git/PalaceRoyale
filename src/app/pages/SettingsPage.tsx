@@ -1,8 +1,39 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb, History } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb, History, Download, Upload } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { GameSettings } from '../contexts/SettingsContext';
 import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
+import type { PlayerStats } from '../game-engine';
+
+const STATS_KEY = 'palace-stats';
+
+function encodeStats(stats: PlayerStats): string {
+  try {
+    return btoa(JSON.stringify(stats));
+  } catch {
+    return '';
+  }
+}
+
+function decodeStats(input: string): PlayerStats | null {
+  try {
+    const parsed = JSON.parse(atob(input.trim())) as Record<string, unknown>;
+    const { gold, silver, bronze, losses, gamesPlayed } = parsed;
+    if (
+      typeof gold === 'number' && gold >= 0 &&
+      typeof silver === 'number' && silver >= 0 &&
+      typeof bronze === 'number' && bronze >= 0 &&
+      typeof losses === 'number' && losses >= 0 &&
+      typeof gamesPlayed === 'number' && gamesPlayed >= 0
+    ) {
+      return { gold, silver, bronze, losses, gamesPlayed };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 interface SettingRow {
   key: keyof GameSettings;
@@ -76,6 +107,52 @@ export const SettingsPage: React.FC = () => {
   const { settings, toggleSetting } = useSettings();
   const fullscreenAvailable = !!document.fullscreenEnabled;
 
+  const [exportString, setExportString] = useState<string | null>(null);
+  const [exportError, setExportError] = useState(false);
+  const [importInput, setImportInput] = useState('');
+  const [importFeedback, setImportFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function handleExport() {
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      const stats: PlayerStats = raw
+        ? (JSON.parse(raw) as PlayerStats)
+        : { gold: 0, silver: 0, bronze: 0, losses: 0, gamesPlayed: 0 };
+      const encoded = encodeStats(stats);
+      if (!encoded) { setExportError(true); return; }
+      setExportError(false);
+      setExportString(encoded);
+    } catch {
+      setExportError(true);
+    }
+  }
+
+  function handleCopy(str: string) {
+    navigator.clipboard.writeText(str).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      setCopied(false);
+      setExportError(true);
+    });
+  }
+
+  function handleImport() {
+    const stats = decodeStats(importInput);
+    if (!stats) {
+      setImportFeedback({ ok: false, msg: 'Invalid data. Please paste a valid export string.' });
+      return;
+    }
+    try {
+      localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+      setImportFeedback({ ok: true, msg: 'Rankings imported successfully!' });
+      setImportInput('');
+    } catch {
+      setImportFeedback({ ok: false, msg: 'Failed to save. Please try again.' });
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-start p-6 text-white">
       {/* Header */}
@@ -146,6 +223,79 @@ export const SettingsPage: React.FC = () => {
             </div>
           );
         })}
+
+        {/* Rankings export / import */}
+        <div>
+          <h2 className="text-xs uppercase tracking-widest text-green-400 mb-2 pl-1">Rankings</h2>
+          <div className="flex flex-col gap-2">
+            {/* Export */}
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
+            >
+              <Download className="w-5 h-5 text-yellow-400" />
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-yellow-300">Export Rankings</div>
+                <div className="text-xs text-green-400">Generate a string to back up your data</div>
+              </div>
+            </button>
+            {exportString !== null && (
+              <div className="flex flex-col gap-2 px-1">
+                <textarea
+                  readOnly
+                  value={exportString}
+                  rows={3}
+                  className="w-full bg-black/30 border border-white/20 rounded-lg p-2 text-xs text-green-200 font-mono resize-none focus:outline-none"
+                  onClick={e => (e.target as HTMLTextAreaElement).select()}
+                />
+                {exportError && (
+                  <p className="text-xs px-1 text-red-400">Could not copy to clipboard. Please select and copy the text above manually.</p>
+                )}
+                <button
+                  onClick={() => handleCopy(exportString)}
+                  className="self-end text-xs px-3 py-1.5 rounded-lg bg-yellow-500/20 border border-yellow-400/30 text-yellow-300 hover:bg-yellow-500/30 active:scale-[0.98] transition-all"
+                >
+                  {copied ? '✓ Copied!' : 'Copy to clipboard'}
+                </button>
+              </div>
+            )}
+            {exportError && exportString === null && (
+              <p className="text-xs px-1 text-red-400">Export failed. Please try again.</p>
+            )}
+
+            {/* Import */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+                <Upload className="w-5 h-5 text-green-400 shrink-0" />
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-sm text-green-300">Import Rankings</div>
+                  <div className="text-xs text-green-400">Paste an export string to restore data</div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 px-1">
+                <textarea
+                  value={importInput}
+                  onChange={e => { setImportInput(e.target.value); setImportFeedback(null); }}
+                  rows={3}
+                  placeholder="Paste export string here…"
+                  className="w-full bg-black/30 border border-white/20 rounded-lg p-2 text-xs text-green-200 font-mono resize-none focus:outline-none placeholder:text-green-700"
+                />
+                {importFeedback && (
+                  <p className={`text-xs px-1 ${importFeedback.ok ? 'text-green-400' : 'text-red-400'}`}>
+                    {importFeedback.msg}
+                  </p>
+                )}
+                <button
+                  onClick={handleImport}
+                  disabled={!importInput.trim()}
+                  className="self-end text-xs px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-400/30 text-green-300 hover:bg-green-500/30 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  Import
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Version History & Tutorial links */}
         <div>
