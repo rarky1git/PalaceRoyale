@@ -46,7 +46,7 @@ export interface GameState {
   winner: string | null;
   eliminated: string[]; // players who cleared all cards (safe)
   loser: string | null; // last player standing = loser
-  lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle' | 'nudge' | 'palace-invalid'; cards?: Card[]; playerId?: string } | null;
+  lastAction?: { type: 'play' | 'pickup' | 'wipeout' | 'draw' | 'slam' | 'sparkle' | 'nudge' | 'palace-invalid' | 'one-card-palace'; cards?: Card[]; playerId?: string } | null;
   drawBonus?: { playerId: string } | null; // After playing from hand and drawing, can play cards matching pile top rank
   pendingCounter?: {
     type: 'drawBonus';
@@ -549,6 +549,7 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
   const s = deepClone(state);
   const player = s.players.find(p => p.id === playerId)!;
   const pIdx = s.players.findIndex(p => p.id === playerId);
+  let oneCardLeftAfterPalace = false;
 
   if (s.phase !== 'playing') throw new Error('Game not in play phase');
   if (pIdx !== s.currentPlayerIndex) throw new Error('Not your turn');
@@ -589,6 +590,7 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
     // Valid - add to pile
     s.pickupPile.push(card);
     s.log.push(`${player.name} plays ${cardDisplay(card)} from palace face-down.`);
+    if (player.palace.filter(sl => sl.faceDown !== null).length === 1) oneCardLeftAfterPalace = true;
   } else {
     // Normal play from hand or palace face-up
     cards = cardIds.map(id => {
@@ -691,20 +693,20 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
   drawCards(s, playerId);
 
   if (handleElimination(s, playerId)) {
-    s.lastAction = { type: 'play', cards, playerId };
+    s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
     s.version++;
     return s;
   }
 
   // Bonus: if hand matches pile top rank, offer one bonus play before passing turn
   if (trySetDrawBonus(s, playerId)) {
-    s.lastAction = { type: 'play', cards, playerId };
+    s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
     s.version++;
     return s;
   }
 
   advanceTurn(s);
-  s.lastAction = { type: 'play', cards, playerId };
+  s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
   s.version++;
   return s;
 }
@@ -712,6 +714,7 @@ export function playCards(state: GameState, playerId: string, cardIds: string[])
 export function playBonusAction(state: GameState, playerId: string, cardIds: string[]): GameState {
   const s = deepClone(state);
   const player = s.players.find(p => p.id === playerId)!;
+  let oneCardLeftAfterPalace = false;
 
   if (!s.waitingForBonus) throw new Error('No bonus action pending');
   if (cardIds.length === 0) throw new Error('Must play at least one card');
@@ -744,6 +747,7 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
     }
 
     s.pickupPile.push(card);
+    if (player.palace.filter(sl => sl.faceDown !== null).length === 1) oneCardLeftAfterPalace = true;
   } else {
     cards = cardIds.map(id => {
       if (source === 'hand') return player.hand.find(c => c.id === id)!;
@@ -830,20 +834,20 @@ export function playBonusAction(state: GameState, playerId: string, cardIds: str
   drawCards(s, playerId);
 
   if (handleElimination(s, playerId)) {
-    s.lastAction = { type: 'play', cards, playerId };
+    s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
     s.version++;
     return s;
   }
 
   // Bonus: if hand matches pile top rank after bonus action, offer one more bonus play
   if (trySetDrawBonus(s, playerId)) {
-    s.lastAction = { type: 'play', cards, playerId };
+    s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
     s.version++;
     return s;
   }
 
   advanceTurn(s);
-  s.lastAction = { type: 'play', cards, playerId };
+  s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
   s.version++;
   return s;
 }
@@ -1050,6 +1054,7 @@ export function stealTurn(state: GameState, stealingPlayerId: string, cardIds: s
 // Counter player plays a valid card, cancelling the pending bonus
 export function playCounter(state: GameState, playerId: string, cardIds: string[]): GameState {
   const s = deepClone(state);
+  let oneCardLeftAfterPalace = false;
   if (!s.pendingCounter) throw new Error('No counter opportunity pending');
 
   const pIdx = s.players.findIndex(p => p.id === playerId);
@@ -1087,6 +1092,7 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
       return s;
     }
     s.pickupPile.push(card);
+    if (player.palace.filter(sl => sl.faceDown !== null).length === 1) oneCardLeftAfterPalace = true;
   } else {
     cards = cardIds.map(id => {
       if (source === 'hand') {
@@ -1174,19 +1180,19 @@ export function playCounter(state: GameState, playerId: string, cardIds: string[
   drawCards(s, playerId);
 
   if (handleElimination(s, playerId)) {
-    s.lastAction = { type: 'play', cards, playerId };
+    s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
     s.version++;
     return s;
   }
 
   if (trySetDrawBonus(s, playerId)) {
-    s.lastAction = { type: 'play', cards, playerId };
+    s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
     s.version++;
     return s;
   }
 
   advanceTurn(s);
-  s.lastAction = { type: 'play', cards, playerId };
+  s.lastAction = { type: oneCardLeftAfterPalace ? 'one-card-palace' : 'play', cards, playerId };
   s.version++;
   return s;
 }

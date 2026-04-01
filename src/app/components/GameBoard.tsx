@@ -102,16 +102,19 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [showHelp, setShowHelp] = useState(false);
   // Tutorial step: 0 = hidden, 1..N = active step
   const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
-  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | null>(null);
+  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | 'one-card-palace' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
+  const [oneCardPlayerName, setOneCardPlayerName] = useState<string>('');
+  const [oneCardPlayerEmoji, setOneCardPlayerEmoji] = useState<string>('');
   const [handPage, setHandPage] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const palaceValidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const oneCardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
   const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
@@ -171,6 +174,18 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setAnimEmoji(emoji);
           setAnimEffect('pickup');
           setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3000);
+        } else if (action?.type === 'one-card-palace') {
+          const p = gameState.players.find(q => q.id === action.playerId);
+          setOneCardPlayerName(p?.name ?? '');
+          setOneCardPlayerEmoji(p?.emoji ?? DEFAULT_EMOJI);
+          setAnimEffect('one-card-palace');
+          if (oneCardTimerRef.current) clearTimeout(oneCardTimerRef.current);
+          oneCardTimerRef.current = setTimeout(() => {
+            setAnimEffect(null);
+            setOneCardPlayerName('');
+            setOneCardPlayerEmoji('');
+            oneCardTimerRef.current = null;
+          }, 2500);
         }
       }
       if (settings.particleEffects && action?.type === 'palace-invalid' && action.cards?.[0]) {
@@ -181,6 +196,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         if (settings.particleEffects) {
           setAnimEffect('palace-invalid');
         }
+        if (oneCardTimerRef.current) { clearTimeout(oneCardTimerRef.current); oneCardTimerRef.current = null; }
         if (palaceValidTimerRef.current) { clearTimeout(palaceValidTimerRef.current); palaceValidTimerRef.current = null; }
         if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
         palaceInvalidTimerRef.current = setTimeout(() => {
@@ -194,10 +210,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     }
   }, [gameState.version, settings.particleEffects]);
 
-  // Cleanup palace-invalid and palace-valid timers on unmount
+  // Cleanup palace-invalid, palace-valid, and one-card timers on unmount
   useEffect(() => () => {
     if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
     if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
+    if (oneCardTimerRef.current) clearTimeout(oneCardTimerRef.current);
   }, []);
 
   // Detect valid palace face-down reveal and trigger palace-valid animEffect
@@ -793,6 +810,50 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </motion.div>
         )}
 
+        {animEffect === 'one-card-palace' && (
+          <motion.div
+            key="one-card-palace"
+            className="absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center gap-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            {/* Amber radial glow backdrop */}
+            <motion.div
+              className="absolute inset-0"
+              style={{ background: 'radial-gradient(ellipse at center, rgba(234,179,8,0.20) 0%, transparent 68%)' }}
+            />
+            {/* Player emoji */}
+            <motion.div
+              className="text-5xl z-10"
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: [0.3, 1.3, 1, 1], opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 2.5, times: [0, 0.18, 0.55, 1] }}
+            >
+              {oneCardPlayerEmoji}
+            </motion.div>
+            {/* "1 CARD LEFT!" text */}
+            <motion.div
+              className="text-4xl font-black text-yellow-400 z-10 tracking-wide"
+              style={{ textShadow: '0 0 24px rgba(234,179,8,0.9), 0 0 48px rgba(234,179,8,0.4)' }}
+              initial={{ scale: 2.8, opacity: 0, rotate: -5 }}
+              animate={{ scale: [2.8, 1, 1.05, 1], opacity: [0, 1, 1, 0], rotate: [-5, 0, 1, 0] }}
+              transition={{ duration: 2.5, times: [0, 0.14, 0.50, 1] }}
+            >
+              1 CARD LEFT!
+            </motion.div>
+            {/* Player name subtitle */}
+            <motion.div
+              className="text-base text-amber-200 font-semibold z-10"
+              animate={{ opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 2.5, times: [0, 0.14, 0.72, 1] }}
+            >
+              {oneCardPlayerName}
+            </motion.div>
+          </motion.div>
+        )}
+
       </AnimatePresence>
 
       {/* Debug overlay */}
@@ -1078,8 +1139,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             />
           )}
           {isPlaying && !isFinished && (
-            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : animEffect === 'palace-valid' ? 'bg-green-900/40 text-green-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
-              {animEffect === 'palace-invalid'
+            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : animEffect === 'palace-valid' ? 'bg-green-900/40 text-green-300' : animEffect === 'one-card-palace' ? 'bg-yellow-500/30 text-yellow-200' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
+              {animEffect === 'one-card-palace'
+                ? `⚠️ ${oneCardPlayerName}: 1 card left!`
+                : animEffect === 'palace-invalid'
                 ? `❌ ${palaceInvalidPlayerName} picks up the pile!`
                 : animEffect === 'palace-valid'
                   ? '✅ Safe! Face-down card played successfully!'
