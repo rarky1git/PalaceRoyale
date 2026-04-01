@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Crown, Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles, GraduationCap, X } from 'lucide-react';
+import { Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles, GraduationCap, X } from 'lucide-react';
 import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
 import { WHATS_NEW_SEEN_KEY, APP_VERSION } from './WhatsNewPage';
 import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
@@ -295,9 +295,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-emerald-900 flex flex-col items-center p-6 text-white">
       <div className="flex-1 flex flex-col items-center justify-center w-full">
       <div className="flex flex-row items-center gap-4 mb-8 w-full max-w-xs">
-        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
-          <Crown className="w-9 h-9 text-yellow-900" />
-        </div>
+        <img src="/logo.svg" alt="Palace Royale logo" className="w-16 h-16 rounded-2xl shadow-lg shrink-0" />
         <div className="text-left">
           <h1 className="text-3xl font-bold tracking-tight">Palace Royale</h1>
           <p className="text-green-300 text-sm">A knight with no cards fears nothing.</p>
