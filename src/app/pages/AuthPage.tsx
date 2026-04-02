@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [tab, setTab] = useState<'signup' | 'signin'>('signup');
 
   // Sign Up fields
+  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState(() => {
@@ -26,7 +27,7 @@ export default function AuthPage() {
   const customEmojiInputRef = useRef<HTMLInputElement>(null);
 
   // Sign In fields
-  const [signInUsername, setSignInUsername] = useState('');
+  const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
 
   const [error, setError] = useState('');
@@ -57,6 +58,10 @@ export default function AuthPage() {
 
   const handleSignUp = async () => {
     setError('');
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
     if (!username.trim() || username.trim().length < 3) {
       setError('Username must be at least 3 characters.');
       return;
@@ -81,7 +86,7 @@ export default function AuthPage() {
       if (stats.gamesPlayed === 0) stats = undefined;
     }
 
-    const result = await signUp(username.trim().toLowerCase(), password, nickname.trim(), emoji, stats);
+    const result = await signUp(email.trim().toLowerCase(), username.trim().toLowerCase(), password, nickname.trim(), emoji, stats);
     setSubmitting(false);
     if (result.error) {
       setError(result.error);
@@ -90,8 +95,8 @@ export default function AuthPage() {
 
   const handleSignIn = async () => {
     setError('');
-    if (!signInUsername.trim()) {
-      setError('Please enter your username.');
+    if (!signInEmail.trim()) {
+      setError('Please enter your email.');
       return;
     }
     if (!signInPassword) {
@@ -100,7 +105,7 @@ export default function AuthPage() {
     }
 
     setSubmitting(true);
-    const result = await signIn(signInUsername.trim(), signInPassword);
+    const result = await signIn(signInEmail.trim().toLowerCase(), signInPassword);
     setSubmitting(false);
     if (result.error) {
       setError(result.error);
@@ -164,6 +169,17 @@ export default function AuthPage() {
 
       {tab === 'signup' && (
         <div className="flex flex-col gap-4 w-full max-w-xs">
+          <div>
+            <label className="text-sm text-green-300 mb-1 block">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="w-full px-4 py-3 bg-white/10 rounded-xl text-white placeholder:text-green-400 outline-none focus:ring-2 ring-yellow-400"
+            />
+          </div>
+
           <div>
             <label className="text-sm text-green-300 mb-1 block">Username</label>
             <input
@@ -284,13 +300,13 @@ export default function AuthPage() {
       {tab === 'signin' && (
         <div className="flex flex-col gap-4 w-full max-w-xs">
           <div>
-            <label className="text-sm text-green-300 mb-1 block">Username</label>
+            <label className="text-sm text-green-300 mb-1 block">Email</label>
             <input
-              value={signInUsername}
-              onChange={e => setSignInUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-              placeholder="Your username"
-              maxLength={20}
-              className="w-full px-4 py-3 bg-white/10 rounded-xl text-white placeholder:text-green-400 outline-none focus:ring-2 ring-yellow-400 font-mono"
+              type="email"
+              value={signInEmail}
+              onChange={e => setSignInEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="w-full px-4 py-3 bg-white/10 rounded-xl text-white placeholder:text-green-400 outline-none focus:ring-2 ring-yellow-400"
             />
           </div>
 

@@ -22,13 +22,14 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   signUp: (
+    email: string,
     username: string,
     password: string,
     nickname: string,
     emoji: string,
     importStats?: PlayerStats,
   ) => Promise<{ error?: string }>;
-  signIn: (username: string, password: string) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Pick<Profile, 'nickname' | 'emoji' | 'incognito'>>) => Promise<{ error?: string }>;
   refreshProfile: () => Promise<void>;
@@ -113,13 +114,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const signUp = useCallback(async (
+    email: string,
     username: string,
     password: string,
     nickname: string,
     emoji: string,
     importStats?: PlayerStats,
   ): Promise<{ error?: string }> => {
-    const email = `${username.toLowerCase()}@palace.local`;
     const defaultStats: PlayerStats = { gold: 0, silver: 0, bronze: 0, losses: 0, gamesPlayed: 0 };
     const rankings = importStats ?? defaultStats;
 
@@ -131,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (authError) {
       if (authError.message.includes('already registered')) {
-        return { error: 'Username already taken.' };
+        return { error: 'An account with this email already exists.' };
       }
       return { error: authError.message };
     }
@@ -165,18 +166,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const signIn = useCallback(async (
-    username: string,
+    email: string,
     password: string,
   ): Promise<{ error?: string }> => {
-    const email = `${username.toLowerCase()}@palace.local`;
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      return { error: 'Invalid username or password.' };
+      return { error: 'Invalid email or password.' };
     }
 
     if (data.user) {
