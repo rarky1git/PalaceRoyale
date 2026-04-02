@@ -1,5 +1,7 @@
--- Profiles table
-CREATE TABLE profiles (
+-- Profiles table (public schema)
+-- References Supabase Auth's auth.users table.
+-- A trigger auto-creates a row here whenever a new user signs up.
+CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username TEXT UNIQUE NOT NULL,
   nickname TEXT NOT NULL DEFAULT '',
@@ -10,22 +12,54 @@ CREATE TABLE profiles (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- RLS policies
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+-- Trigger function: auto-create a profile row when a new auth user is created.
+-- Reads username, nickname, emoji, and optional imported rankings from
+-- the raw_user_meta_data that was passed via signUp({ options: { data: {...} } }).
+-- Uses SECURITY DEFINER so it can write to public.profiles on behalf of the
+-- supabase_auth_admin role that performs the insert into auth.users.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, nickname, emoji, rankings)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data ->> 'username', ''),
+    COALESCE(new.raw_user_meta_data ->> 'nickname', ''),
+    COALESCE(new.raw_user_meta_data ->> 'emoji', '🦆'),
+    COALESCE(
+      (new.raw_user_meta_data -> 'rankings')::jsonb,
+      '{"gold":0,"silver":0,"bronze":0,"losses":0,"gamesPlayed":0}'::jsonb
+    )
+  );
+  RETURN new;
+END;
+$$;
 
--- Users can read their own profile
-CREATE POLICY "Users can read own profile"
-  ON profiles FOR SELECT USING (auth.uid() = id);
+-- Fire the trigger after every new auth user row is inserted.
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- RLS policies
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can look up profiles (for leaderboard, friend search, multiplayer display).
+-- Sensitive data (email, etc.) lives in auth.users, not here.
+CREATE POLICY "Public profiles are viewable by everyone"
+  ON public.profiles FOR SELECT
+  USING (true);
 
 -- Users can update their own profile
 CREATE POLICY "Users can update own profile"
-  ON profiles FOR UPDATE USING (auth.uid() = id);
+  ON public.profiles FOR UPDATE
+  USING (auth.uid() = id);
 
--- Users can insert their own profile (on signup)
+-- Users can insert their own profile (fallback if trigger didn't fire)
 CREATE POLICY "Users can insert own profile"
-  ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Anyone can look up a profile by username (for friend requests)
--- Returns limited columns via Edge Function, not direct table access
-CREATE POLICY "Public username lookup"
-  ON profiles FOR SELECT USING (true);
+  ON public.profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);
