@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
 import { APP_VERSION } from './pages/WhatsNewPage';
 
@@ -12,8 +13,10 @@ export default function App() {
 
   return (
     <SettingsProvider>
-      <RouterProvider router={router} />
-      <AddToHomeScreenModal />
+      <AuthProvider>
+        <RouterProvider router={router} />
+        <AddToHomeScreenModal />
+      </AuthProvider>
     </SettingsProvider>
   );
 }

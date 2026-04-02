@@ -8,6 +8,8 @@ import SettingsPage from './pages/SettingsPage';
 import RejoinGamesPage from './pages/RejoinGamesPage';
 import WhatsNewPage from './pages/WhatsNewPage';
 import VersionLogPage from './pages/VersionLogPage';
+import AuthPage from './pages/AuthPage';
+import ProfilePage from './pages/ProfilePage';
 
 export const router = createBrowserRouter([
   { path: '/', Component: HomePage },
@@ -19,4 +21,6 @@ export const router = createBrowserRouter([
   { path: '/rejoin-games', Component: RejoinGamesPage },
   { path: '/whats-new', Component: WhatsNewPage },
   { path: '/version-log', Component: VersionLogPage },
+  { path: '/auth', Component: AuthPage },
+  { path: '/profile', Component: ProfilePage },
 ]);
