@@ -5,35 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import type { GameSettings } from '../contexts/SettingsContext';
 import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
 import type { PlayerStats } from '../game-engine';
-
-const STATS_KEY = 'palace-stats';
-
-function encodeStats(stats: PlayerStats): string {
-  try {
-    return btoa(JSON.stringify(stats));
-  } catch {
-    return '';
-  }
-}
-
-function decodeStats(input: string): PlayerStats | null {
-  try {
-    const parsed = JSON.parse(atob(input.trim())) as Record<string, unknown>;
-    const { gold, silver, bronze, losses, gamesPlayed } = parsed;
-    if (
-      typeof gold === 'number' && gold >= 0 &&
-      typeof silver === 'number' && silver >= 0 &&
-      typeof bronze === 'number' && bronze >= 0 &&
-      typeof losses === 'number' && losses >= 0 &&
-      typeof gamesPlayed === 'number' && gamesPlayed >= 0
-    ) {
-      return { gold, silver, bronze, losses, gamesPlayed };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+import { encodeStats, decodeStats, STATS_KEY } from '../lib/stats';
 
 interface SettingRow {
   key: keyof GameSettings;

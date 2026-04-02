@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles, GraduationCap, X } from 'lucide-react';
-import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
+import { Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles, GraduationCap, X, UserPlus } from 'lucide-react';
+import { MAX_DECKS, MAX_PLAYERS_PER_DECK, BOT_PROFILES } from '../game-engine';
+import type { PlayerStats } from '../game-engine';
 import { WHATS_NEW_SEEN_KEY, APP_VERSION } from './WhatsNewPage';
 import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
+import { useAuth } from '../contexts/AuthContext';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
 const STATS_KEY = 'palace-stats';
@@ -99,6 +101,7 @@ function formatShortDateTime(ts?: number): string {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [playerCount, setPlayerCount] = useState(2);
   const [deckCount, setDeckCount] = useState(1);
   const [playerName, setPlayerName] = useState(() => {
@@ -296,10 +299,27 @@ export default function HomePage() {
       <div className="flex-1 flex flex-col items-center justify-center w-full">
       <div className="flex flex-row items-center gap-4 mb-8 w-full max-w-xs">
         <img src="/logo.svg" alt="Palace Royale logo" className="w-16 h-16 rounded-2xl shadow-lg shrink-0" />
-        <div className="text-left">
+        <div className="text-left flex-1">
           <h1 className="text-3xl font-bold tracking-tight">Palace Royale</h1>
           <p className="text-green-300 text-sm">A knight with no cards fears nothing.</p>
         </div>
+        {user && profile ? (
+          <button
+            onClick={() => navigate('/profile')}
+            className="w-11 h-11 rounded-full bg-yellow-500/20 border border-yellow-400/30 flex items-center justify-center text-xl hover:bg-yellow-500/30 active:scale-90 transition-all shrink-0"
+            title={`Signed in as @${profile.username}`}
+          >
+            {profile.emoji}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate('/auth')}
+            className="w-11 h-11 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all shrink-0"
+            title="Sign up or sign in"
+          >
+            <UserPlus className="w-5 h-5 text-green-300" />
+          </button>
+        )}
       </div>
 
       {mode === 'menu' && (
