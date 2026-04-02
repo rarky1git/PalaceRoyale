@@ -4,9 +4,8 @@ import { User, LogOut, Save, Shield, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { STATS_KEY } from '../lib/stats';
 import { supabase } from '../lib/supabase';
+import { PLAYER_EMOJIS, extractFirstEmoji } from '../lib/emoji';
 import type { PlayerStats } from '../game-engine';
-
-const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -51,17 +50,8 @@ export default function ProfilePage() {
   };
 
   const handleCustomEmojiInput = (value: string) => {
-    if (!value) return;
-    try {
-      const segmenter = new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' });
-      const segments = [...segmenter.segment(value)] as { segment: string }[];
-      const emojiSeg = segments.find((s: { segment: string }) => /\p{Extended_Pictographic}/u.test(s.segment));
-      const first = emojiSeg?.segment ?? segments[0]?.segment;
-      if (first) selectEmoji(first);
-    } catch {
-      const first = Array.from(value).slice(0, 2).join('');
-      if (first) selectEmoji(first);
-    }
+    const first = extractFirstEmoji(value);
+    if (first) selectEmoji(first);
   };
 
   const isCustomEmoji = !PLAYER_EMOJIS.includes(emoji);

@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { PlayerStats } from '../game-engine';
 import { STATS_KEY } from '../lib/stats';
+import { PLAYER_NAME_KEY, PLAYER_EMOJI_KEY } from '../lib/storage-keys';
 
 export interface Profile {
   id: string;
@@ -47,8 +48,8 @@ const AuthContext = createContext<AuthContextValue>({
 /** Sync profile data to localStorage so the rest of the app picks it up. */
 function syncProfileToLocalStorage(profile: Profile) {
   try {
-    localStorage.setItem('palace-player-name', profile.nickname || profile.username);
-    localStorage.setItem('palace-player-emoji', profile.emoji);
+    localStorage.setItem(PLAYER_NAME_KEY, profile.nickname || profile.username);
+    localStorage.setItem(PLAYER_EMOJI_KEY, profile.emoji);
     localStorage.setItem(STATS_KEY, JSON.stringify(profile.rankings));
   } catch { /* ignore */ }
 }
