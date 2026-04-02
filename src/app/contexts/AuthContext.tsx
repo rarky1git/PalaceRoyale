@@ -124,10 +124,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const defaultStats: PlayerStats = { gold: 0, silver: 0, bronze: 0, losses: 0, gamesPlayed: 0 };
     const rankings = importStats ?? defaultStats;
 
-    // Sign up with Supabase Auth
+    // Sign up with Supabase Auth.
+    // Pass profile fields via options.data so they are stored in
+    // auth.users.raw_user_meta_data. The database trigger
+    // (handle_new_user) reads them to auto-create the profiles row.
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          username: username.toLowerCase(),
+          nickname,
+          emoji,
+          rankings,
+        },
+      },
     });
 
     if (authError) {
@@ -139,25 +150,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!authData.user) {
       return { error: 'Sign-up failed. Please try again.' };
-    }
-
-    // Insert profile row
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: authData.user.id,
-        username: username.toLowerCase(),
-        nickname,
-        emoji,
-        rankings,
-      });
-
-    if (profileError) {
-      // Clean up: if profile insert fails, still allow the user to continue
-      // The profile might already exist if there was a race condition
-      if (!profileError.message.includes('duplicate key')) {
-        return { error: 'Account created but profile setup failed. Please sign in and try again.' };
-      }
     }
 
     setUser(authData.user);
