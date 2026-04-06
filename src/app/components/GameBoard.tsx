@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
-import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight, HelpCircle, Settings } from 'lucide-react';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
-  canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
+  canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor, cardValue,
   playCards, playBonusAction, pickupPile, stealTurn,
   playDrawBonus,
   playCounter, getCounterPlayableCards, aiHandleCounter,
@@ -107,6 +107,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
+  const [palaceNearMiss, setPalaceNearMiss] = useState(false);
   const [oneCardPlayerName, setOneCardPlayerName] = useState<string>('');
   const [oneCardPlayerEmoji, setOneCardPlayerEmoji] = useState<string>('');
   const [handPage, setHandPage] = useState(0);
@@ -193,6 +194,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setPalaceValidCard(null);
+        const isNearMiss = !!(action.topCard && action.cards[0] &&
+          Math.abs(cardValue(action.cards[0].rank) - cardValue(action.topCard.rank)) === 1);
+        setPalaceNearMiss(isNearMiss);
         if (settings.particleEffects) {
           setAnimEffect('palace-invalid');
         }
@@ -203,6 +207,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setAnimEffect(null);
           setPalaceInvalidCard(null);
           setPalaceInvalidPlayerName('');
+          setPalaceNearMiss(false);
           palaceInvalidTimerRef.current = null;
         }, 3200);
       }
@@ -1078,6 +1083,17 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                         boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
                       }}
                     />
+                    {/* Near-miss monkey face */}
+                    {palaceNearMiss && (
+                      <motion.div
+                        className="absolute -top-5 -right-4 text-2xl select-none pointer-events-none"
+                        initial={{ scale: 0, rotate: -30, opacity: 0 }}
+                        animate={{ scale: [0, 1.4, 1], rotate: [-30, 10, 0], opacity: [0, 1, 1, 0] }}
+                        transition={{ duration: 3.0, times: [0, 0.15, 0.3, 1] }}
+                      >
+                        🙈
+                      </motion.div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -1199,20 +1215,34 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
-      {/* Chat View toggle — shown above My area during play */}
-      {isPlaying && (
-        <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
+      {/* Toolbar row — always visible above My area */}
+      <div className="relative z-[1] flex justify-end items-center gap-1.5 px-3 py-1 shrink-0">
+        <button
+          onClick={() => setShowHelp(true)}
+          title="How to Play"
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => navigate('/settings')}
+          title="Settings"
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+        {isPlaying && (
           <button
             onClick={() => setChatMode(v => !v)}
             title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 ${
               chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
             }`}
           >
             <Video className="w-4 h-4" />
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* My area - highlighted when my turn or draw bonus available */}
       <div className={`relative z-[1] shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
