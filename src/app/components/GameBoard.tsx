@@ -85,6 +85,21 @@ function getCardRotation(cardId: string, range: number = 5): number {
   return (r * range * 2) - range;
 }
 
+// Returns the (xPct, yPx) position for opponent i of n along a half-circle arc.
+// xPct: percentage of container width (for `left` CSS).
+// yPx: pixels from the top of the container.
+// Arc spans from ~155° (left) to ~25° (right), bowing upward at center (90°).
+function getOpponentArcPosition(i: number, n: number): { xPct: number; yPx: number } {
+  const t = n <= 1 ? 0.5 : i / (n - 1);
+  const angle = Math.PI * (0.86 - 0.72 * t); // ~154.8° → ~25.2°
+  const rx = 38; // horizontal radius as % of container width
+  const ry = 68; // vertical radius in px
+  return {
+    xPct: 50 + rx * Math.cos(angle),
+    yPx: ry * (1 - Math.sin(angle)),
+  };
+}
+
 interface GameBoardProps {
   gameState: GameState;
   myPlayerId: string;
@@ -552,6 +567,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     ...(nextOpponent ? [nextOpponent] : []),
     ...otherOpponents,
   ];
+  // Opponents in clockwise turn order: next-to-play first (left of arc), prev-to-play last (right of arc).
+  // This mirrors the physical card-table seating: you sit at the bottom, play goes left-to-right.
+  const opponentsInOrder = Array.from(
+    { length: totalPlayers - 1 },
+    (_, i) => gameState.players[(myPlayerIndex + 1 + i) % totalPlayers]
+  );
   // Smart sort: during player's turn, playable cards first, then unplayable; otherwise rank order
   const sortedHand = (() => {
     const ranked = [...me.hand].sort((a, b) => a.rank - b.rank);
@@ -963,58 +984,67 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         </div>
       )}
 
-      {/* Opponents area — hidden when chat mode is active */}
-      <div
-        className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${chatMode ? 'hidden' : ''}`}
-        onClick={() => setMiniOpponents(v => !v)}
-      >
-        {prevOpponent && (
-          <>
-            <OpponentView
-              key={prevOpponent.id}
-              player={prevOpponent}
-              isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
-              isSetup={isSetup}
-              isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
-              eliminated={gameState.eliminated || []}
-              mini={miniOpponents}
-              isBeforePlayer
-              deferredSetup={deferredSetup}
+      {/* Opponents area — half-circle arc layout, hidden when chat mode is active */}
+      {!chatMode && opponentsInOrder.length > 0 && (() => {
+        // Arc container height: vertical radius (68px) + card height + padding
+        const ARC_RY = 68;
+        const CARD_H = miniOpponents ? 72 : 130;
+        const containerH = ARC_RY + CARD_H + 8;
+        return (
+          <div
+            className="relative z-[1] w-full shrink-0 cursor-pointer select-none"
+            style={{ height: containerH }}
+            onClick={() => setMiniOpponents(v => !v)}
+          >
+            {/* Subtle arc guide: an oversized ellipse clipped to show just the top arc */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 pointer-events-none rounded-[50%] border border-white/10"
+              style={{
+                width: '76%',
+                height: ARC_RY * 2,
+                bottom: 0,
+              }}
             />
-            <div className="shrink-0 w-px self-stretch bg-white/20 mx-1" />
-          </>
-        )}
-        {nextOpponent && (
-          <OpponentView
-            key={nextOpponent.id}
-            player={nextOpponent}
-            isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === nextOpponent.id}
-            isSetup={isSetup}
-            isEliminated={(gameState.eliminated || []).includes(nextOpponent.id)}
-            eliminated={gameState.eliminated || []}
-            mini={miniOpponents}
-            isAfterPlayer
-            deferredSetup={deferredSetup}
-          />
-        )}
-        {otherOpponents.map(opp => (
-          <OpponentView
-            key={opp.id}
-            player={opp}
-            isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === opp.id}
-            isSetup={isSetup}
-            isEliminated={(gameState.eliminated || []).includes(opp.id)}
-            eliminated={gameState.eliminated || []}
-            mini={miniOpponents}
-            deferredSetup={deferredSetup}
-          />
-        ))}
-        {opponents.length > 0 && (
-          <div className="flex items-start pt-1 pl-1 shrink-0">
-            <span className="text-[9px] text-green-500/60">{miniOpponents ? '＋' : '－'}</span>
+
+            {opponentsInOrder.map((opponent, i) => {
+              const { xPct, yPx } = getOpponentArcPosition(i, opponentsInOrder.length);
+              const isCurrentTurn = gameState.players[gameState.currentPlayerIndex]?.id === opponent.id;
+              const isEliminated = (gameState.eliminated || []).includes(opponent.id);
+              return (
+                <div
+                  key={opponent.id}
+                  className="absolute"
+                  style={{
+                    left: `${xPct}%`,
+                    top: yPx,
+                    transform: 'translateX(-50%)',
+                    zIndex: isCurrentTurn ? 2 : 1,
+                  }}
+                >
+                  <OpponentView
+                    player={opponent}
+                    isCurrentTurn={isCurrentTurn}
+                    isSetup={isSetup}
+                    isEliminated={isEliminated}
+                    eliminated={gameState.eliminated || []}
+                    mini={miniOpponents}
+                    isBeforePlayer={opponent.id === prevOpponent?.id}
+                    isAfterPlayer={opponent.id === nextOpponent?.id}
+                    deferredSetup={deferredSetup}
+                    arcMode
+                    totalOpponents={opponentsInOrder.length}
+                  />
+                </div>
+              );
+            })}
+
+            {/* Expand / collapse toggle */}
+            <div className="absolute bottom-0.5 right-1.5 pointer-events-none">
+              <span className="text-[9px] text-white/30">{miniOpponents ? '＋' : '－'}</span>
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Middle area: piles + log */}
       <div className={`relative z-[1] flex-1 flex flex-col items-center ${chatMode ? 'justify-end' : 'justify-center'} gap-2 px-3 min-h-0 overflow-visible`}>
@@ -1485,18 +1515,58 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup }: {
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup, arcMode, totalOpponents }: {
   player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
+  arcMode?: boolean; totalOpponents?: number;
 }) {
+  const bgClass = isEliminated ? 'bg-green-500/10 opacity-50' :
+    isCurrentTurn ? 'bg-yellow-500/20 ring-2 ring-yellow-400' :
+    isBeforePlayer ? 'bg-purple-500/20 ring-1 ring-purple-400/40' :
+    isAfterPlayer ? 'bg-green-500/20 ring-1 ring-green-400/40' :
+    'bg-black/20';
+
+  if (arcMode) {
+    // Compact arc seat — width scales down slightly for many opponents
+    const cardW = totalOpponents && totalOpponents >= 5 ? 'w-13' : 'w-15';
+    return (
+      <div className={`flex flex-col items-center gap-0.5 ${cardW} rounded-xl p-1 transition-all overflow-hidden ${bgClass}`}>
+        {/* Emoji + name */}
+        <span className="text-lg leading-none">{player.emoji || DEFAULT_EMOJI}</span>
+        <span className="text-[8px] font-bold truncate w-full text-center leading-tight">
+          {player.name}
+        </span>
+        {/* Status indicator */}
+        {(isCurrentTurn || isEliminated) && (
+          <span className="text-[9px] leading-none">
+            {isEliminated ? '✅' : '⭐'}
+          </span>
+        )}
+        {/* Body */}
+        {isSetup ? (
+          <span className="text-[8px] text-green-300 leading-tight">
+            {deferredSetup ? '…' : (player.setupPhase === 'done' ? '✅' : '⏳')}
+          </span>
+        ) : (
+          <>
+            {!mini && <PalaceDisplay palace={player.palace} mini showRotation />}
+            <div className="flex items-center gap-0.5 flex-wrap justify-center">
+              {isEliminated ? (
+                <span className="text-[8px] text-green-300">{getRankLabel(player.id, eliminated)}</span>
+              ) : (
+                <span className="bg-white/20 text-green-100 px-1 py-px rounded-full text-[8px] font-medium">
+                  {player.hand.length}
+                </span>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
-      isEliminated ? 'bg-green-500/10 opacity-50' :
-      isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
-      isBeforePlayer ? 'bg-purple-500/20' :
-      isAfterPlayer ? 'bg-green-500/20' :
-      'bg-black/10'
-    }`}>
+    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${bgClass}`}>
       <span className="text-[10px] font-bold truncate max-w-26 mb-1">
         {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
       </span>
