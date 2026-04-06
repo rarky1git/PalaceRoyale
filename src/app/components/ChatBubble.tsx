@@ -22,26 +22,26 @@ export function ChatBubble({ text, msgId }: ChatBubbleProps) {
       {visible && (
         <motion.div
           key={msgId}
-          initial={{ opacity: 0, y: 6, scale: 0.85 }}
+          initial={{ opacity: 0, y: -6, scale: 0.85 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -4, scale: 0.9 }}
+          exit={{ opacity: 0, y: 4, scale: 0.9 }}
           transition={{ duration: 0.18 }}
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 pointer-events-none"
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-40 pointer-events-none"
           style={{ minWidth: '60px', maxWidth: '140px' }}
         >
           <div className="bg-white text-gray-900 text-[10px] font-semibold px-2.5 py-1.5 rounded-xl shadow-lg text-center leading-tight break-words relative">
-            {text}
-            {/* Triangle pointer pointing down */}
+            {/* Triangle pointer pointing up */}
             <div
-              className="absolute top-full left-1/2 -translate-x-1/2"
+              className="absolute bottom-full left-1/2 -translate-x-1/2"
               style={{
                 width: 0,
                 height: 0,
                 borderLeft: '5px solid transparent',
                 borderRight: '5px solid transparent',
-                borderTop: '6px solid white',
+                borderBottom: '6px solid white',
               }}
             />
+            {text}
           </div>
         </motion.div>
       )}
