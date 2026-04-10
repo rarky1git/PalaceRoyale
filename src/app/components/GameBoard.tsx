@@ -147,6 +147,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const isPlaying = gameState.phase === 'playing';
   const isFinished = gameState.phase === 'finished';
   const isEliminated = (gameState.eliminated || []).includes(myPlayerId);
+  const isFastForward = isEliminated && !isMultiplayer && isPlaying;
   // During multiplayer setup, defer opponent status until local player finishes
   const deferredSetup = isMultiplayer && isSetup && me.setupPhase !== 'done';
 
@@ -309,9 +310,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     // Get current player's bot profile for variable timing
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
     const botProfile = getBotProfile(currentPlayer.name);
-    const aiDelay = botProfile
-      ? getRandomBotDelay(botProfile)
-      : Math.floor(800 + Math.random() * 800); // fallback: 800–1600ms random
+    const aiDelay = isFastForward
+      ? 150
+      : botProfile
+        ? getRandomBotDelay(botProfile)
+        : Math.floor(800 + Math.random() * 800); // fallback: 800–1600ms random
 
     const timer = setTimeout(() => {
       try {
@@ -330,7 +333,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       } catch (e) { console.log('AI error:', e); }
     }, aiDelay);
     return () => clearTimeout(timer);
-  }, [gameState.version, isMyTurn, isPlaying, isMultiplayer]);
+  }, [gameState.version, isMyTurn, isPlaying, isMultiplayer, isFastForward]);
 
   // AI setup for robot mode
   useEffect(() => {
@@ -488,6 +491,25 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       setSelectedCards([]);
       onStateChange(newState);
     } catch (e: any) { setError(e.message); }
+  };
+
+  const handleSkipToEnd = () => {
+    let s = gameState;
+    let safety = 0;
+    while (s.phase !== 'finished' && safety < 10000) {
+      const stealState = checkAISteal(s);
+      if (stealState) { s = stealState; safety++; continue; }
+      if (s.pendingCounter) {
+        const cp = s.players[s.currentPlayerIndex];
+        s = aiHandleCounter(s, getBotProfile(cp.name));
+        safety++;
+        continue;
+      }
+      const cp = s.players[s.currentPlayerIndex];
+      s = aiPlayTurn(s, getBotProfile(cp.name));
+      safety++;
+    }
+    onStateChange(s);
   };
 
   const handleFaceDownPlay = (slotIndex: number) => {
@@ -1556,6 +1578,18 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </div>
         )}
 
+        {/* Fast-forward skip button - shown when human is eliminated in robot mode */}
+        {isFastForward && !isFinished && (
+          <div className="flex gap-2 justify-center pt-1">
+            <button
+              onClick={handleSkipToEnd}
+              className="px-4 py-1.5 bg-white/20 text-white rounded-lg font-bold text-sm hover:bg-white/30 active:scale-95 transition-all"
+            >
+              Skip ⏩
+            </button>
+          </div>
+        )}
+
         {/* Action buttons - below hand */}
         {isPlaying && !isFinished && !isEliminated && (
           <div className="flex gap-2 justify-center pt-1">
@@ -1605,6 +1639,18 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 {currentPlayer.emoji || DEFAULT_EMOJI}
               </button>
             )}
+          </div>
+        )}
+
+        {/* New Game button - robot mode, shown when game is finished */}
+        {isFinished && !isMultiplayer && leaderboardPhase === 'alltime' && (
+          <div className="flex gap-2 justify-center pt-1">
+            <button
+              onClick={() => onStateChange(resetGame(gameState))}
+              className="px-5 py-2 bg-yellow-500 text-black rounded-lg font-bold text-sm hover:bg-yellow-400 active:scale-95 transition-all"
+            >
+              🔄 New Game
+            </button>
           </div>
         )}
 
