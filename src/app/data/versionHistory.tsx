@@ -294,18 +294,6 @@ function InGameChatMockup() {
         <input readOnly value="Your custom message…" className="flex-1 bg-transparent text-[10px] text-white/50 outline-none cursor-default" />
         <span className="text-[9px] text-green-400 font-bold">45</span>
       </div>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1">
-          <span className="text-xs">⚔️</span>
-          <span className="text-[9px] text-yellow-200 font-bold">Arthur:</span>
-          <span className="text-[9px] text-white">GG! 👑</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-green-500/10 rounded-lg px-2 py-1">
-          <span className="text-xs">🦁</span>
-          <span className="text-[9px] text-green-200 font-bold">You:</span>
-          <span className="text-[9px] text-white">Nice play! 🔥</span>
-        </div>
-      </div>
     </div>
   );
 }
