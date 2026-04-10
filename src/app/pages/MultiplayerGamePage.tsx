@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { GameState, cardDisplay } from '../game-engine';
-import { GameBoard } from '../components/GameBoard';
+import { GameBoard, ChatEntry } from '../components/GameBoard';
 import { HowToPlayModal } from '../components/HowToPlayModal';
 import { HelpCircle } from 'lucide-react';
 
 const API = `https://${projectId}.supabase.co/functions/v1/make-server-990c827f`;
 const SAVE_KEY_PREFIX = 'palace-save-';
+
+// Supabase client — used only for Realtime broadcast (chat)
+const supabase = createClient(`https://${projectId}.supabase.co`, publicAnonKey);
 
 /**
  * Merge the local player's completed palace setup into the latest server state.
@@ -52,6 +56,8 @@ export default function MultiplayerGamePage() {
   const [gameState, setGameState] = useState<GameState>(initialState);
   const [syncError, setSyncError] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Record<string, ChatEntry>>({});
+  const chatChannelRef = useRef<RealtimeChannel | null>(null);
   const pollRef = useRef<number>();
   const versionRef = useRef(initialState?.version || 0);
   // Track whether local player has finished setup (face-down + face-up selected)
@@ -74,6 +80,42 @@ export default function MultiplayerGamePage() {
       } catch { /* ignore */ }
     }
   }, [code, playerId]);
+
+  // Supabase Realtime broadcast channel for in-game chat
+  useEffect(() => {
+    if (!code || !playerId) return;
+
+    const channel = supabase.channel(`chat:${code}`, {
+      config: { broadcast: { self: true } },
+    });
+
+    channel.on('broadcast', { event: 'chat' }, (payload) => {
+      const { senderId, text } = payload.payload as { senderId: string; text: string };
+      if (!senderId || !text) return;
+      setChatMessages(prev => ({
+        ...prev,
+        [senderId]: { text, msgId: (prev[senderId]?.msgId ?? 0) + 1 },
+      }));
+    });
+
+    channel.subscribe();
+    chatChannelRef.current = channel;
+
+    return () => {
+      channel.unsubscribe();
+      chatChannelRef.current = null;
+    };
+  }, [code, playerId]);
+
+  const handleSendChat = useCallback((text: string) => {
+    const trimmed = text.slice(0, 45);
+    if (!trimmed || !chatChannelRef.current) return;
+    chatChannelRef.current.send({
+      type: 'broadcast',
+      event: 'chat',
+      payload: { senderId: playerId, text: trimmed },
+    });
+  }, [playerId]);
 
   // Check if local player has finished setup
   const isLocalSetupDone = (() => {
@@ -298,6 +340,8 @@ export default function MultiplayerGamePage() {
           onStateChange={handleStateChange}
           playerEmoji={playerEmoji}
           isMultiplayer
+          chatMessages={chatMessages}
+          onSendChat={handleSendChat}
         />
       </div>
     </div>
