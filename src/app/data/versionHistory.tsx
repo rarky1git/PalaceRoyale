@@ -321,20 +321,21 @@ export function V071Content() {
   return (
     <>
       <FeatureSection emoji="💬" title="In-Game Chat — Multiplayer">
-        <p>Chat with your opponents during any online match! Choose from <strong className="text-white">quick preset messages</strong> or type your own — up to <strong className="text-white">45 characters</strong>. Messages appear in the game feed in real time so everyone stays in the loop.</p>
+        <p>Chat with your opponents during any online match! Choose from <strong className="text-white">quick preset messages</strong> or type your own — up to <strong className="text-white">45 characters</strong>. Messages appear below opponents's names.</p>
         <InGameChatMockup />
         <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="orange">BETA</Chip>
           <Chip color="purple">Multiplayer</Chip>
           <Chip color="green">Preset messages</Chip>
-          <Chip color="blue">Custom up to 45 chars</Chip>
+          <Chip color="blue">Custom messages</Chip>
         </div>
       </FeatureSection>
 
       <FeatureSection emoji="🛠️" title="Improved In-Game Toolbar">
-        <p>The in-game toolbar has been upgraded with quick-access buttons for <strong className="text-white">💬 Chat</strong>, <strong className="text-white">⚙️ Settings</strong>, <strong className="text-white">📖 How-to-Play</strong>, and <strong className="text-white">📹 Video Mode</strong> — all reachable without leaving the game.</p>
+        <p>The in-game toolbar has been upgraded with quick-access buttons for <strong className="text-white">💬 Chat</strong>, <strong className="text-white">⚙️ Settings</strong>, <strong className="text-white">📖 How-to-Play</strong>, and <strong className="text-white">📹 Video Mode</strong>. Settings and How to Play are now pop-up menus— <strong className="text-white">no need to leave the game!</strong></p>
         <div className="flex flex-wrap gap-1 pt-0.5">
           <Chip color="yellow">All game modes</Chip>
-          <Chip color="green">One-tap access</Chip>
+          <Chip color="green">Easier access</Chip>
         </div>
       </FeatureSection>
 
@@ -352,21 +353,21 @@ export function V071Content() {
         <OneCardLeftMockup />
         <div className="flex flex-wrap gap-1 pt-0.5">
           <Chip color="orange">All players</Chip>
-          <Chip color="yellow">Animated banner</Chip>
+          <Chip color="yellow">Animated emoji banner</Chip>
         </div>
       </FeatureSection>
 
       <FeatureSection emoji="🏆" title="Eliminated Players in Chat Mode">
-        <p>In <strong className="text-white">Chat / Video Mode</strong>, players who have safely finished now display their <strong className="text-white">award badge</strong> (🥇 Gold, 🥈 Silver, 🥉 Bronze) right next to their name — so you can see the leaderboard at a glance without leaving the view.</p>
+        <p>In <strong className="text-white">Video Mode</strong>, players who have safely finished now display their <strong className="text-white">award badge</strong> (🥇 Gold, 🥈 Silver, 🥉 Bronze) right next to their name — so you can see the leaderboard at a glance without leaving the view.</p>
         <EliminatedChatMockup />
         <div className="flex flex-wrap gap-1 pt-0.5">
-          <Chip color="yellow">Chat Mode</Chip>
+          <Chip color="yellow">Video Mode</Chip>
           <Chip color="green">Live leaderboard</Chip>
         </div>
       </FeatureSection>
 
       <FeatureSection emoji="📤" title="Export / Import Your Rankings">
-        <p>Head to <strong className="text-white">Settings → Rankings</strong> to export your stats as a file or import them from a previous backup. Great for switching devices or sharing your record with friends.</p>
+        <p>Head to <strong className="text-white">Settings → Rankings</strong> to export your stats as a file or import them from a previous backup. Great for switching devices.</p>
         <ExportImportMockup />
         <div className="flex flex-wrap gap-1 pt-0.5">
           <Chip color="blue">Settings → Rankings</Chip>

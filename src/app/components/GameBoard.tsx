@@ -1274,15 +1274,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </button>
         )}
         <button
-          onClick={() => setChatMode(v => !v)}
-          title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
-          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
-            chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
-          }`}
-        >
-          <Video className="w-4 h-4" />
-        </button>
-        <button
           onClick={() => setShowHelp(true)}
           title="How to Play"
           className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
@@ -1593,16 +1584,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 className="px-4 py-1.5 bg-purple-600 text-white rounded-lg font-bold text-sm animate-pulse hover:bg-purple-500 active:scale-95 transition-all"
               >
                 Steal! (4 of a kind)
-              </button>
-            )}
-            {/* Nudge button: visible to all non-current players */}
-            {isPlaying && !isMyTurn && !isEliminated && currentPlayer && (
-              <button
-                onClick={handleNudge}
-                className="px-3 py-1.5 bg-white/10 text-xl rounded-lg hover:bg-white/20 active:scale-90 transition-all"
-                title={`Nudge ${currentPlayer.name}`}
-              >
-                {currentPlayer.emoji || DEFAULT_EMOJI}
               </button>
             )}
           </div>
