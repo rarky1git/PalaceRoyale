@@ -21,6 +21,7 @@ import {
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
+import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../contexts/SettingsContext';
 import { TutorialOverlay, TUTORIAL_STEPS, TUTORIAL_SEEN_KEY } from './TutorialOverlay';
 
@@ -100,6 +101,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   // Tutorial step: 0 = hidden, 1..N = active step
   const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | 'one-card-palace' | null>(null);
@@ -883,6 +885,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
+      {/* Settings modal */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
       {/* Chat View — floating opponent overlay */}
       {isPlaying && chatMode && chatOpponent && (
         <div
@@ -1225,7 +1230,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           <HelpCircle className="w-4 h-4" />
         </button>
         <button
-          onClick={() => navigate('/settings')}
+          onClick={() => setShowSettings(true)}
           title="Settings"
           className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
         >
