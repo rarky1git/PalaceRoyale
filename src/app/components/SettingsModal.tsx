@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { X, Settings, Volume2, VolumeX, Music, Music2, Maximize, Minimize, Sparkles, Bug, GraduationCap, Lightbulb, History, Download, Upload } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
@@ -106,12 +106,24 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const { settings, toggleSetting } = useSettings();
   const fullscreenAvailable = !!document.fullscreenEnabled;
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const [exportString, setExportString] = useState<string | null>(null);
   const [exportError, setExportError] = useState(false);
   const [importInput, setImportInput] = useState('');
   const [importFeedback, setImportFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    // Focus the dialog panel on open for keyboard users
+    dialogRef.current?.focus();
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   function handleExport() {
     try {
@@ -159,7 +171,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm max-h-[85vh] bg-gradient-to-b from-green-900 to-green-800 rounded-2xl border border-white/20 shadow-2xl flex flex-col overflow-hidden"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="w-full max-w-sm max-h-[85vh] bg-gradient-to-b from-green-900 to-green-800 rounded-2xl border border-white/20 shadow-2xl flex flex-col overflow-hidden outline-none"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
