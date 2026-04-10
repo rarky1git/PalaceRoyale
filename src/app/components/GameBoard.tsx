@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { ChatBubble } from './ChatBubble';
+import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight, HelpCircle, Settings } from 'lucide-react';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
-  canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
+  canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor, cardValue,
   playCards, playBonusAction, pickupPile, stealTurn,
   playDrawBonus,
   playCounter, getCounterPlayableCards, aiHandleCounter,
@@ -22,6 +23,7 @@ import {
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
+import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../contexts/SettingsContext';
 import { TutorialOverlay, TUTORIAL_STEPS, TUTORIAL_SEEN_KEY } from './TutorialOverlay';
 
@@ -108,6 +110,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   // Tutorial step: 0 = hidden, 1..N = active step
   const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
   const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | 'one-card-palace' | null>(null);
@@ -115,6 +118,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
+  const [palaceNearMiss, setPalaceNearMiss] = useState(false);
   const [oneCardPlayerName, setOneCardPlayerName] = useState<string>('');
   const [oneCardPlayerEmoji, setOneCardPlayerEmoji] = useState<string>('');
   const [handPage, setHandPage] = useState(0);
@@ -204,6 +208,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setPalaceValidCard(null);
+        const isNearMiss = !!(action.topCard && action.cards[0] &&
+          Math.abs(cardValue(action.cards[0].rank) - cardValue(action.topCard.rank)) === 1);
+        setPalaceNearMiss(isNearMiss);
         if (settings.particleEffects) {
           setAnimEffect('palace-invalid');
         }
@@ -214,6 +221,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setAnimEffect(null);
           setPalaceInvalidCard(null);
           setPalaceInvalidPlayerName('');
+          setPalaceNearMiss(false);
           palaceInvalidTimerRef.current = null;
         }, 3200);
       }
@@ -889,6 +897,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
+      {/* Settings modal */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
       {/* Chat View — floating opponent overlay */}
       {isPlaying && chatMode && chatOpponent && (
         <div
@@ -1098,6 +1109,17 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                         boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
                       }}
                     />
+                    {/* Near-miss monkey face */}
+                    {palaceNearMiss && (
+                      <motion.div
+                        className="absolute -top-5 -right-4 text-2xl select-none pointer-events-none"
+                        initial={{ scale: 0, rotate: -30, opacity: 0 }}
+                        animate={{ scale: [0, 1.4, 1], rotate: [-30, 10, 0], opacity: [0, 1, 1, 0] }}
+                        transition={{ duration: 3.0, times: [0, 0.15, 0.3, 1] }}
+                      >
+                        🙈
+                      </motion.div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -1235,31 +1257,57 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
-            {/* Chat panel toggle — multiplayer only */}
-            {isMultiplayer && onSendChat && (
-              <button
-                onClick={() => setShowChatPanel(v => !v)}
-                title="Chat"
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
-                  showChatPanel ? 'bg-blue-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
-                }`}
-              >
-                <MessageCircle className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={() => setChatMode(v => !v)}
-              title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
-                chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
-              }`}
-            >
-              <Video className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       )}
+      {/* Toolbar row — always visible above My area */}
+      <div className="relative z-[1] flex justify-end items-center gap-1.5 px-3 py-1 shrink-0">
+        {/* Chat panel toggle — multiplayer only */}
+        {isMultiplayer && onSendChat && (
+          <button
+            onClick={() => setShowChatPanel(v => !v)}
+            title="Chat"
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+              showChatPanel ? 'bg-blue-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={() => setChatMode(v => !v)}
+          title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+            chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+          }`}
+        >
+          <Video className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setShowHelp(true)}
+          title="How to Play"
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setShowSettings(true)}
+          title="Settings"
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+        {isPlaying && (
+          <button
+            onClick={() => setChatMode(v => !v)}
+            title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 ${
+              chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+            }`}
+          >
+            <Video className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {/* In-game chat panel — multiplayer only */}
       <AnimatePresence>
