@@ -16,6 +16,7 @@ interface PalaceDisplayProps {
   centered?: boolean;
   showRotation?: boolean;
   playableCardIds?: string[];
+  isGameOver?: boolean;
 }
 
 // Deterministic rotation seeded by card identity (produces different angles per card)
@@ -48,6 +49,7 @@ export function PalaceDisplay({
   centered,
   showRotation,
   playableCardIds,
+  isGameOver,
 }: PalaceDisplayProps) {
   // True when every slot has lost its face-up card
   const allFaceUpGone = palace.every(slot => !slot.faceUp);
@@ -73,11 +75,14 @@ export function PalaceDisplay({
           const faceUpRot = showRotation && slot.faceUp ? getCardRotation(slot.faceUp.id) : 0;
           const faceDownRot = showRotation && slot.faceDown ? getCardRotation('fd-' + i) : 0;
           const isFaceUpPlayable = !slot.faceUp || !playableCardIds || playableCardIds.includes(slot.faceUp.id);
+          // At end of game, show face-down cards on top so they can be revealed
+          // even when a face-up card is still present in the same slot.
+          const faceDownOnTop = !!isGameOver && !!slot.faceDown && !!slot.faceUp;
           return (
             <div key={i} className="flex flex-col-reverse items-center">
               {/* Face up card — hidden (no placeholder) once all face-ups are gone */}
               {!allFaceUpGone && (
-                <div className="flex gap-2 z-10" style={showRotation && slot.faceUp ? { transform: `rotate(${faceUpRot}deg)` } : undefined}>
+                <div className={`flex gap-2 ${faceDownOnTop ? '' : 'z-10'}`} style={showRotation && slot.faceUp ? { transform: `rotate(${faceUpRot}deg)` } : undefined}>
                   {slot.faceUp ? (
                     <PlayingCard
                       card={slot.faceUp}
@@ -93,9 +98,9 @@ export function PalaceDisplay({
                   )}
                 </div>
               )}
-              {/* Face down card — when all face-ups gone, sits on top with no negative offset */}
+              {/* Face down card — when all face-ups gone or game over, sits on top with no negative offset */}
               <div
-                className={`flex gap-2 -mr-[.5em] ${allFaceUpGone ? '' : mini ? '-mb-[3em]' : '-mb-[5em]'}`}
+                className={`flex gap-2 -mr-[.5em] ${allFaceUpGone || faceDownOnTop ? '' : mini ? '-mb-[3em]' : '-mb-[5em]'} ${faceDownOnTop ? 'z-10' : ''}`}
                 style={showRotation && slot.faceDown ? { transform: `rotate(${faceDownRot}deg)` } : undefined}
               >
                 {slot.faceDown ? (

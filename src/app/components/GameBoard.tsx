@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
-import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { ChatBubble } from './ChatBubble';
+import { Video, AlignLeft, AlignRight, ChevronLeft, ChevronRight, HelpCircle, Settings } from 'lucide-react';
 import {
   GameState, Card, Player, PlayerStats,
   getPlayableCards, getBonusPlayableCards, getPlayerSource,
-  canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor,
+  canStealTurn, getRankDisplay, getSuitSymbol, getSuitColor, cardValue,
   playCards, playBonusAction, pickupPile, stealTurn,
   playDrawBonus,
   playCounter, getCounterPlayableCards, aiHandleCounter,
@@ -21,6 +23,7 @@ import {
 import { PlayingCard, CardStack } from './PlayingCard';
 import { PalaceDisplay } from './PalaceDisplay';
 import { HowToPlayModal } from './HowToPlayModal';
+import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../contexts/SettingsContext';
 import { TutorialOverlay, TUTORIAL_STEPS, TUTORIAL_SEEN_KEY } from './TutorialOverlay';
 
@@ -85,6 +88,11 @@ function getCardRotation(cardId: string, range: number = 5): number {
   return (r * range * 2) - range;
 }
 
+export interface ChatEntry {
+  text: string;
+  msgId: number;
+}
+
 interface GameBoardProps {
   gameState: GameState;
   myPlayerId: string;
@@ -92,26 +100,33 @@ interface GameBoardProps {
   isMultiplayer?: boolean;
   playerEmoji?: string; // Local player's chosen emoji (for multiplayer emoji sync)
   tutorialMode?: boolean; // When true, show step-by-step tutorial overlay
+  chatMessages?: Record<string, ChatEntry>; // playerId → latest chat entry
+  onSendChat?: (text: string) => void;
 }
 
-export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji, tutorialMode = false }: GameBoardProps) {
+export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer, playerEmoji, tutorialMode = false, chatMessages, onSendChat }: GameBoardProps) {
   const navigate = useNavigate();
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showLog, setShowLog] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   // Tutorial step: 0 = hidden, 1..N = active step
   const [tutorialStep, setTutorialStep] = useState<number>(() => tutorialMode ? 1 : 0);
-  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | null>(null);
+  const [animEffect, setAnimEffect] = useState<'slam' | 'sparkle' | 'wipeout' | 'palace-invalid' | 'palace-valid' | 'pickup' | 'one-card-palace' | null>(null);
   const [animEmoji, setAnimEmoji] = useState<string | null>(null);
   const [palaceInvalidCard, setPalaceInvalidCard] = useState<Card | null>(null);
   const [palaceInvalidPlayerName, setPalaceInvalidPlayerName] = useState<string>('');
   const [palaceValidCard, setPalaceValidCard] = useState<Card | null>(null);
+  const [palaceNearMiss, setPalaceNearMiss] = useState(false);
+  const [oneCardPlayerName, setOneCardPlayerName] = useState<string>('');
+  const [oneCardPlayerEmoji, setOneCardPlayerEmoji] = useState<string>('');
   const [handPage, setHandPage] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
   const prevVersionRef = useRef(gameState.version);
   const palaceInvalidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const palaceValidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const oneCardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevNudgeCountRef = useRef(gameState.nudgeCount ?? 0);
   const [miniOpponents, setMiniOpponents] = useState(false);
   const [leaderboardPhase, setLeaderboardPhase] = useState<'game' | 'alltime'>('game');
@@ -119,6 +134,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
   // Chat View (floating opponent overlay) — multiplayer only
   const [chatMode, setChatMode] = useState(false);
   const [chatAlign, setChatAlign] = useState<'right' | 'left'>('right');
+  // In-game chat panel
+  const [showChatPanel, setShowChatPanel] = useState(false);
+  const [chatInputText, setChatInputText] = useState('');
   const { settings } = useSettings();
 
   const me = gameState.players.find(p => p.id === myPlayerId)!;
@@ -171,6 +189,18 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           setAnimEmoji(emoji);
           setAnimEffect('pickup');
           setTimeout(() => { setAnimEffect(null); setAnimEmoji(null); }, 3000);
+        } else if (action?.type === 'one-card-palace') {
+          const p = gameState.players.find(q => q.id === action.playerId);
+          setOneCardPlayerName(p?.name ?? '');
+          setOneCardPlayerEmoji(p?.emoji ?? DEFAULT_EMOJI);
+          setAnimEffect('one-card-palace');
+          if (oneCardTimerRef.current) clearTimeout(oneCardTimerRef.current);
+          oneCardTimerRef.current = setTimeout(() => {
+            setAnimEffect(null);
+            setOneCardPlayerName('');
+            setOneCardPlayerEmoji('');
+            oneCardTimerRef.current = null;
+          }, 2500);
         }
       }
       if (settings.particleEffects && action?.type === 'palace-invalid' && action.cards?.[0]) {
@@ -178,15 +208,20 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         setPalaceInvalidCard(action.cards[0]);
         setPalaceInvalidPlayerName(playerName);
         setPalaceValidCard(null);
+        const isNearMiss = !!(action.topCard && action.cards[0] &&
+          Math.abs(cardValue(action.cards[0].rank) - cardValue(action.topCard.rank)) === 1);
+        setPalaceNearMiss(isNearMiss);
         if (settings.particleEffects) {
           setAnimEffect('palace-invalid');
         }
+        if (oneCardTimerRef.current) { clearTimeout(oneCardTimerRef.current); oneCardTimerRef.current = null; }
         if (palaceValidTimerRef.current) { clearTimeout(palaceValidTimerRef.current); palaceValidTimerRef.current = null; }
         if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
         palaceInvalidTimerRef.current = setTimeout(() => {
           setAnimEffect(null);
           setPalaceInvalidCard(null);
           setPalaceInvalidPlayerName('');
+          setPalaceNearMiss(false);
           palaceInvalidTimerRef.current = null;
         }, 3200);
       }
@@ -194,10 +229,11 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
     }
   }, [gameState.version, settings.particleEffects]);
 
-  // Cleanup palace-invalid and palace-valid timers on unmount
+  // Cleanup palace-invalid, palace-valid, and one-card timers on unmount
   useEffect(() => () => {
     if (palaceInvalidTimerRef.current) clearTimeout(palaceInvalidTimerRef.current);
     if (palaceValidTimerRef.current) clearTimeout(palaceValidTimerRef.current);
+    if (oneCardTimerRef.current) clearTimeout(oneCardTimerRef.current);
   }, []);
 
   // Detect valid palace face-down reveal and trigger palace-valid animEffect
@@ -793,6 +829,50 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           </motion.div>
         )}
 
+        {animEffect === 'one-card-palace' && (
+          <motion.div
+            key="one-card-palace"
+            className="absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center gap-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            {/* Amber radial glow backdrop */}
+            <motion.div
+              className="absolute inset-0"
+              style={{ background: 'radial-gradient(ellipse at center, rgba(234,179,8,0.20) 0%, transparent 68%)' }}
+            />
+            {/* Player emoji */}
+            <motion.div
+              className="text-5xl z-10"
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: [0.3, 1.3, 1, 1], opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 2.5, times: [0, 0.18, 0.55, 1] }}
+            >
+              {oneCardPlayerEmoji}
+            </motion.div>
+            {/* "1 CARD LEFT!" text */}
+            <motion.div
+              className="text-4xl font-black text-yellow-400 z-10 tracking-wide"
+              style={{ textShadow: '0 0 24px rgba(234,179,8,0.9), 0 0 48px rgba(234,179,8,0.4)' }}
+              initial={{ scale: 2.8, opacity: 0, rotate: -5 }}
+              animate={{ scale: [2.8, 1, 1.05, 1], opacity: [0, 1, 1, 0], rotate: [-5, 0, 1, 0] }}
+              transition={{ duration: 2.5, times: [0, 0.14, 0.50, 1] }}
+            >
+              1 CARD LEFT!
+            </motion.div>
+            {/* Player name subtitle */}
+            <motion.div
+              className="text-base text-amber-200 font-semibold z-10"
+              animate={{ opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 2.5, times: [0, 0.14, 0.72, 1] }}
+            >
+              {oneCardPlayerName}
+            </motion.div>
+          </motion.div>
+        )}
+
       </AnimatePresence>
 
       {/* Debug overlay */}
@@ -817,6 +897,9 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
       {/* Help modal */}
       {showHelp && <HowToPlayModal onClose={() => setShowHelp(false)} />}
 
+      {/* Settings modal */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
       {/* Chat View — floating opponent overlay */}
       {isPlaying && chatMode && chatOpponent && (
         <div
@@ -824,7 +907,13 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           style={{ maxWidth: 'calc(50% - 1rem)' }}
         >
           {/* Opponent info */}
-          <div className="flex items-center gap-1.5 px-2 pt-2 pb-1">
+          <div className="relative flex items-center gap-1.5 px-2 pt-2 pb-1">
+            {isMultiplayer && chatMessages?.[chatOpponent.id] && (
+              <ChatBubble
+                text={chatMessages[chatOpponent.id].text}
+                msgId={chatMessages[chatOpponent.id].msgId}
+              />
+            )}
             <span className="text-base leading-none">{chatOpponent.emoji || DEFAULT_EMOJI}</span>
             <span className={`text-[10px] font-bold truncate flex-1 ${
               (gameState.eliminated || []).includes(chatOpponent.id) ? 'text-green-300' :
@@ -881,6 +970,24 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               );
             })()}
           </div>
+
+          {/* Eliminated players */}
+          {(gameState.eliminated || []).length > 0 && (
+            <div className="border-t border-white/10 px-2 py-1">
+              <span className="text-[8px] text-green-400 leading-tight">Eliminated:</span>
+              {(gameState.eliminated || []).map((pid) => {
+                const ep = gameState.players.find(p => p.id === pid);
+                if (!ep) return null;
+                return (
+                  <div key={pid} className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[11px]">{ep.emoji || DEFAULT_EMOJI}</span>
+                    <span className="text-[9px] text-white font-medium truncate flex-1">{ep.name}</span>
+                    <span className="text-[8px] text-yellow-300 shrink-0">{getRankLabel(pid, gameState.eliminated)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -901,6 +1008,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               mini={miniOpponents}
               isBeforePlayer
               deferredSetup={deferredSetup}
+              chatEntry={chatMessages?.[prevOpponent.id]}
             />
             <div className="shrink-0 w-px self-stretch bg-white/20 mx-1" />
           </>
@@ -916,6 +1024,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             mini={miniOpponents}
             isAfterPlayer
             deferredSetup={deferredSetup}
+            chatEntry={chatMessages?.[nextOpponent.id]}
           />
         )}
         {otherOpponents.map(opp => (
@@ -928,6 +1037,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             eliminated={gameState.eliminated || []}
             mini={miniOpponents}
             deferredSetup={deferredSetup}
+            chatEntry={chatMessages?.[opp.id]}
           />
         ))}
         {opponents.length > 0 && (
@@ -999,6 +1109,17 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                         boxShadow: '0 0 20px 6px rgba(220, 38, 38, 0.7)',
                       }}
                     />
+                    {/* Near-miss monkey face */}
+                    {palaceNearMiss && (
+                      <motion.div
+                        className="absolute -top-5 -right-4 text-2xl select-none pointer-events-none"
+                        initial={{ scale: 0, rotate: -30, opacity: 0 }}
+                        animate={{ scale: [0, 1.4, 1], rotate: [-30, 10, 0], opacity: [0, 1, 1, 0] }}
+                        transition={{ duration: 3.0, times: [0, 0.15, 0.3, 1] }}
+                      >
+                        🙈
+                      </motion.div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -1060,8 +1181,10 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
             />
           )}
           {isPlaying && !isFinished && (
-            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : animEffect === 'palace-valid' ? 'bg-green-900/40 text-green-300' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
-              {animEffect === 'palace-invalid'
+            <div className={`text-sm font-medium px-3 py-1 rounded-full ${animEffect === 'palace-invalid' ? 'bg-red-900/40 text-red-300' : animEffect === 'palace-valid' ? 'bg-green-900/40 text-green-300' : animEffect === 'one-card-palace' ? 'bg-yellow-500/30 text-yellow-200' : (isMyTurn || hasDrawBonus) ? 'bg-yellow-500/30 text-yellow-200' : 'bg-white/10 text-green-200'}`}>
+              {animEffect === 'one-card-palace'
+                ? `⚠️ ${oneCardPlayerName}: 1 card left!`
+                : animEffect === 'palace-invalid'
                 ? `❌ ${palaceInvalidPlayerName} picks up the pile!`
                 : animEffect === 'palace-valid'
                   ? '✅ Safe! Face-down card played successfully!'
@@ -1118,20 +1241,149 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         )}
       </div>
 
-      {/* Chat View toggle — shown above My area during play */}
+      {/* Chat View toggle + Chat button — shown above My area during play */}
       {isPlaying && (
-        <div className="relative z-[1] flex justify-end px-3 py-1 shrink-0">
+        <div className="relative z-[1] flex items-center justify-between px-3 py-1 shrink-0">
+          {/* Local player chat bubble */}
+          <div className="relative flex items-center">
+            {isMultiplayer && chatMessages?.[myPlayerId] && (
+              <div className="relative">
+                <ChatBubble
+                  text={chatMessages[myPlayerId].text}
+                  msgId={chatMessages[myPlayerId].msgId}
+                  position="above"
+                />
+                <span className="text-[10px] font-bold text-green-200">{me.emoji || DEFAULT_EMOJI} {me.name}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Toolbar row — always visible above My area */}
+      <div className="relative z-[1] flex justify-end items-center gap-1.5 px-3 py-1 shrink-0">
+        {/* Chat panel toggle — multiplayer only */}
+        {isMultiplayer && onSendChat && (
+          <button
+            onClick={() => setShowChatPanel(v => !v)}
+            title="Chat"
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+              showChatPanel ? 'bg-blue-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={() => setShowHelp(true)}
+          title="How to Play"
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setShowSettings(true)}
+          title="Settings"
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-green-300 hover:bg-white/20 transition-all active:scale-90"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+        {isPlaying && (
           <button
             onClick={() => setChatMode(v => !v)}
             title={chatMode ? 'Hide opponent view' : 'Show opponent view'}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 shrink-0 ${
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 ${
               chatMode ? 'bg-purple-500 text-white' : 'bg-white/10 text-green-300 hover:bg-white/20'
             }`}
           >
             <Video className="w-4 h-4" />
           </button>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* In-game chat panel — multiplayer only */}
+      <AnimatePresence>
+        {isMultiplayer && isPlaying && showChatPanel && onSendChat && (
+          <motion.div
+            key="chat-panel"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.15 }}
+            className="relative z-[2] shrink-0 px-3 pb-2"
+          >
+            <div className="bg-black/60 border border-white/15 rounded-xl p-2.5 space-y-2 backdrop-blur-sm">
+              {/* Preset options */}
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  'Wahhh!',
+                  'Rude!',
+                  'Karma!',
+                  'Who tf?',
+                  'Womp Womppp',
+                  'Seriously??',
+                ].map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => {
+                      onSendChat(preset);
+                      setShowChatPanel(false);
+                    }}
+                    className="px-1.5 py-1 bg-white/10 hover:bg-white/20 active:scale-95 rounded-lg text-[10px] text-white transition-all text-center leading-tight"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              {/* Emoji quick-picks */}
+              <div className="flex gap-1.5 justify-center">
+                {['😲', '🙀', '💀', '👑', '👀', '⁉️', '❤️'].map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      onSendChat(emoji);
+                      setShowChatPanel(false);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 active:scale-95 rounded-lg text-base transition-all"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              {/* Custom text input */}
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={chatInputText}
+                  onChange={e => setChatInputText(e.target.value.slice(0, 45))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && chatInputText.trim()) {
+                      onSendChat(chatInputText.trim());
+                      setChatInputText('');
+                      setShowChatPanel(false);
+                    }
+                  }}
+                  placeholder="Say something… (45 chars)"
+                  maxLength={45}
+                  className="flex-1 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-[11px] text-white placeholder-white/40 outline-none focus:border-white/40"
+                />
+                <button
+                  disabled={!chatInputText.trim()}
+                  onClick={() => {
+                    if (chatInputText.trim()) {
+                      onSendChat(chatInputText.trim());
+                      setChatInputText('');
+                      setShowChatPanel(false);
+                    }
+                  }}
+                  className="px-2.5 py-1 bg-blue-500 hover:bg-blue-400 disabled:opacity-40 active:scale-95 rounded-lg text-[11px] text-white font-bold transition-all shrink-0"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* My area - highlighted when my turn or draw bonus available */}
       <div className={`relative z-[1] shrink-0 p-2 pb-4 space-y-2 transition-all duration-300 overflow-visible ${
@@ -1153,6 +1405,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               centered={palaceIsActive}
               showRotation
               playableCardIds={source === 'palace-faceup' ? playableCardIds : undefined}
+              isGameOver={isFinished}
             />
           </div>
         )}
@@ -1333,16 +1586,6 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 Steal! (4 of a kind)
               </button>
             )}
-            {/* Nudge button: visible to all non-current players */}
-            {isPlaying && !isMyTurn && !isEliminated && currentPlayer && (
-              <button
-                onClick={handleNudge}
-                className="px-3 py-1.5 bg-white/10 text-xl rounded-lg hover:bg-white/20 active:scale-90 transition-all"
-                title={`Nudge ${currentPlayer.name}`}
-              >
-                {currentPlayer.emoji || DEFAULT_EMOJI}
-              </button>
-            )}
           </div>
         )}
 
@@ -1403,21 +1646,27 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup }: {
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup, chatEntry }: {
   player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
   isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
+  chatEntry?: { text: string; msgId: number };
 }) {
   return (
-    <div className={`flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 overflow-hidden ${
+    <div className={`relative flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 ${
       isEliminated ? 'bg-green-500/10 opacity-50' :
       isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
       isBeforePlayer ? 'bg-purple-500/20' :
       isAfterPlayer ? 'bg-green-500/20' :
       'bg-black/10'
     }`}>
-      <span className="text-[10px] font-bold truncate max-w-26 mb-1">
-        {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
-      </span>
+      <div className="relative flex items-center justify-center w-full">
+        {chatEntry && (
+          <ChatBubble text={chatEntry.text} msgId={chatEntry.msgId} />
+        )}
+        <span className="text-[10px] font-bold truncate max-w-26 mb-1">
+          {player.emoji || DEFAULT_EMOJI} {player.name} {isEliminated ? '✅' : isCurrentTurn ? '⭐' : ''}
+        </span>
+      </div>
       {isSetup ? (
         <span className="text-[10px] text-green-300">
           {deferredSetup ? '...' : (player.setupPhase === 'done' ? '✅ Ready' : '⏳ Setting up')}

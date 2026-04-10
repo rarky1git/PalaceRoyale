@@ -180,6 +180,111 @@ function ChatViewMockup() {
   );
 }
 
+// ---- v0.7.1 helper mockups ----
+
+function EliminatedChatMockup() {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {[
+        { name: 'Arthur', emoji: '⚔️', award: '🥇', color: 'text-yellow-300', label: 'Gold!' },
+        { name: 'Henry',  emoji: '🛡️', award: '🥈', color: 'text-gray-300',   label: 'Silver!' },
+        { name: 'You',    emoji: '🦁', award: null,  color: 'text-green-300',  label: 'Playing…' },
+      ].map(p => (
+        <div key={p.name} className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+          <span className="text-base">{p.emoji}</span>
+          <span className={`text-[10px] font-bold ${p.color} flex-1`}>{p.name}</span>
+          {p.award
+            ? <span className="text-xs">{p.award} <span className={`font-bold ${p.color}`}>{p.label}</span></span>
+            : <span className="text-[10px] text-green-400">{p.label}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OneCardLeftMockup() {
+  return (
+    <div className="flex flex-col items-center gap-2 bg-black/30 rounded-xl p-3">
+      <div className="flex items-center gap-2 bg-orange-500/20 border border-orange-400/50 rounded-full px-4 py-2 animate-pulse">
+        <span className="text-lg">⚠️</span>
+        <span className="text-xs font-bold text-orange-200">Arthur — 1 card left!</span>
+      </div>
+      <div className="flex gap-1 justify-center">
+        <div className="w-8 h-11 rounded-md bg-gradient-to-br from-blue-700 to-blue-900 border border-blue-400 flex items-center justify-center shadow-md">
+          <span className="text-white text-xs font-bold">♠</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExportImportMockup() {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-400/30 rounded-lg px-3 py-2">
+        <span className="text-base">📤</span>
+        <div className="flex-1">
+          <div className="text-[10px] font-bold text-blue-200">Export Rankings</div>
+          <div className="text-[9px] text-blue-400">Save your stats as a file</div>
+        </div>
+        <span className="text-[9px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">Export</span>
+      </div>
+      <div className="flex items-center gap-2 bg-green-500/10 border border-green-400/30 rounded-lg px-3 py-2">
+        <span className="text-base">📥</span>
+        <div className="flex-1">
+          <div className="text-[10px] font-bold text-green-200">Import Rankings</div>
+          <div className="text-[9px] text-green-400">Restore from a file or another device</div>
+        </div>
+        <span className="text-[9px] font-bold bg-green-600 text-white px-2 py-0.5 rounded-full">Import</span>
+      </div>
+    </div>
+  );
+}
+
+function NearMissMockup() {
+  return (
+    <div className="flex flex-col items-center gap-2 bg-black/30 rounded-xl p-3">
+      <div className="flex gap-2 items-center justify-center">
+        {['A', 'K', '?'].map((r, i) => (
+          <div key={i} className={`w-9 h-12 rounded-md border-2 flex items-center justify-center shadow-sm ${
+            i < 2 ? 'bg-white border-gray-300 text-gray-900 font-bold text-sm' : 'bg-gradient-to-br from-blue-700 to-blue-900 border-red-400 ring-2 ring-red-500/60'
+          }`}>
+            {i < 2 ? r : <span className="text-white text-xs font-bold">♠</span>}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-400/40 rounded-lg px-3 py-1">
+        <span className="text-sm">😬</span>
+        <span className="text-[10px] font-bold text-red-200">So close! Pick up the pile</span>
+      </div>
+    </div>
+  );
+}
+
+function InGameChatMockup() {
+  const presets = ['Wahhh!', 'Rude!', 'Karma!', 'Who tf?', 'Womp Womppp', 'Seriously??'];
+  const emojis = ['😲', '🙀', '💀', '👑', '👀', '⁉️', '❤️'];
+  return (
+    <div className="flex flex-col gap-2 bg-black/30 rounded-xl p-3">
+      <div className="text-[9px] text-green-400 font-bold uppercase tracking-wide">Quick presets</div>
+      <div className="flex flex-wrap gap-1">
+        {presets.map(p => (
+          <span key={p} className="px-2 py-1 bg-white/10 border border-white/20 rounded-full text-[9px] text-white">{p}</span>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {emojis.map(e => (
+          <span key={e} className="px-2 py-1 bg-white/10 border border-white/20 rounded-full text-[9px] text-white">{e}</span>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5 bg-white/5 border border-white/20 rounded-lg px-2 py-1.5">
+        <input readOnly value="Your custom message…" className="flex-1 bg-transparent text-[10px] text-white/50 outline-none cursor-default" />
+        <span className="text-[9px] text-green-400 font-bold">45</span>
+      </div>
+    </div>
+  );
+}
+
 // ---- v0.7.0 helper mockups ----
 
 function TutorialMockup() {
@@ -211,6 +316,68 @@ function PaginatedHandMockup() {
 }
 
 // ---- Version content components ----
+
+export function V071Content() {
+  return (
+    <>
+      <FeatureSection emoji="💬" title="In-Game Chat — Multiplayer">
+        <p>Chat with your opponents during any online match! Choose from <strong className="text-white">quick preset messages</strong> or type your own — up to <strong className="text-white">45 characters</strong>. Messages appear below opponents's names.</p>
+        <InGameChatMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="orange">BETA</Chip>
+          <Chip color="purple">Multiplayer</Chip>
+          <Chip color="green">Preset messages</Chip>
+          <Chip color="blue">Custom messages</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="🛠️" title="Improved In-Game Toolbar">
+        <p>The in-game toolbar has been upgraded with quick-access buttons for <strong className="text-white">💬 Chat</strong>, <strong className="text-white">⚙️ Settings</strong>, <strong className="text-white">📖 How-to-Play</strong>, and <strong className="text-white">📹 Video Mode</strong>. Settings and How to Play are now pop-up menus— <strong className="text-white">no need to leave the game!</strong></p>
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="yellow">All game modes</Chip>
+          <Chip color="green">Easier access</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="😬" title="Near-Miss Feedback in Palace">
+        <p>When you flip a face-down palace card and it doesn't beat the pile, you now see a <strong className="text-white">near-miss reaction</strong> — a brief animated message so you know exactly what happened before picking up the pile.</p>
+        <NearMissMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="orange">Face-down phase</Chip>
+          <Chip color="red">Near-miss animation</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="⚠️" title={`Animated "1 Card Left" Announcement`}>
+        <p>When any player is down to their <strong className="text-white">last palace card</strong>, a pulsing announcement banner highlights the moment for everyone at the table — building tension as the endgame approaches.</p>
+        <OneCardLeftMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="orange">All players</Chip>
+          <Chip color="yellow">Animated emoji banner</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="🏆" title="Eliminated Players in Chat Mode">
+        <p>In <strong className="text-white">Video Mode</strong>, players who have safely finished now display their <strong className="text-white">award badge</strong> (🥇 Gold, 🥈 Silver, 🥉 Bronze) right next to their name — so you can see the leaderboard at a glance without leaving the view.</p>
+        <EliminatedChatMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="yellow">Video Mode</Chip>
+          <Chip color="green">Live leaderboard</Chip>
+        </div>
+      </FeatureSection>
+
+      <FeatureSection emoji="📤" title="Export / Import Your Rankings">
+        <p>Head to <strong className="text-white">Settings → Rankings</strong> to export your stats as a file or import them from a previous backup. Great for switching devices.</p>
+        <ExportImportMockup />
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          <Chip color="blue">Settings → Rankings</Chip>
+          <Chip color="green">Backup & restore</Chip>
+          <Chip color="purple">Cross-device</Chip>
+        </div>
+      </FeatureSection>
+    </>
+  );
+}
 
 export function V070Content() {
   return (
@@ -374,6 +541,12 @@ export interface VersionEntry {
  * Add new entries to the TOP of this array with each release.
  */
 export const VERSION_HISTORY: VersionEntry[] = [
+  {
+    version: '0.7.1',
+    date: 'April 2026',
+    summary: 'In-game chat, improved toolbar, near-miss feedback, "1 card left" announcements & export/import rankings',
+    Content: V071Content,
+  },
   {
     version: '0.7.0',
     date: 'March 2026',

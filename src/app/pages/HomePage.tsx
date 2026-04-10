@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Bot, Wifi, BookOpen, Settings, RefreshCw, Sparkles, GraduationCap, X } from 'lucide-react';
 import { MAX_DECKS, MAX_PLAYERS_PER_DECK, PlayerStats, BOT_PROFILES } from '../game-engine';
 import { WHATS_NEW_SEEN_KEY, APP_VERSION } from './WhatsNewPage';
+import { VERSION_HISTORY } from '../data/versionHistory';
 import { TUTORIAL_SEEN_KEY } from '../components/TutorialOverlay';
 
 const PLAYER_EMOJIS = ['🦆', '🐻', '🦁', '🐸', '🦊', '🐺', '🦝', '🐼', '🦋', '🐠', '🦄', '🐯'];
@@ -45,7 +46,7 @@ function TutorialBanner({ onStart, onDismiss }: { onStart: () => void; onDismiss
       {/* Dismiss button revealed by swiping */}
       <div
         className={`absolute inset-y-0 flex items-center justify-center transition-opacity ${
-          dragX > 0 ? 'right-0 pr-3' : 'left-0 pl-3'
+          dragX > 0 ? 'left-0 pl-3' : 'right-0 pr-3'
         } ${revealed ? 'opacity-100' : 'opacity-0'}`}
         style={{ width: 64 }}
       >
@@ -317,7 +318,7 @@ export default function HomePage() {
               <Sparkles className="w-6 h-6 text-yellow-300 shrink-0" />
               <div className="text-left flex-1">
                 <div className="font-bold text-yellow-100">What's New in v{APP_VERSION}</div>
-                <div className="text-xs text-yellow-300">Tutorial, paginated hand & more</div>
+                <div className="text-xs text-yellow-300">{VERSION_HISTORY[0].summary}</div>
               </div>
               <span className="text-[10px] font-bold bg-yellow-500 text-black px-1.5 py-0.5 rounded-full shrink-0">NEW</span>
             </button>
