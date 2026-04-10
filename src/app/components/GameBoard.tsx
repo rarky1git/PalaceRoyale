@@ -1223,6 +1223,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
                 <ChatBubble
                   text={chatMessages[myPlayerId].text}
                   msgId={chatMessages[myPlayerId].msgId}
+                  position="above"
                 />
                 <span className="text-[10px] font-bold text-green-200">{me.emoji || DEFAULT_EMOJI} {me.name}</span>
               </div>
