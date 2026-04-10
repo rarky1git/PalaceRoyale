@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { Crown, ArrowLeft, Sparkles, History } from 'lucide-react';
 import { VERSION_HISTORY } from '../data/versionHistory';
 
-const APP_VERSION = '0.7.0';
+const APP_VERSION = '0.7.1';
 export const WHATS_NEW_SEEN_KEY = 'palace-whats-new-seen';
 export { APP_VERSION };
 
