@@ -241,25 +241,6 @@ function ExportImportMockup() {
   );
 }
 
-function ToolbarMockup() {
-  const buttons = [
-    { icon: '💬', label: 'Chat' },
-    { icon: '⚙️', label: 'Settings' },
-    { icon: '📖', label: 'How-to' },
-    { icon: '📹', label: 'Video' },
-  ];
-  return (
-    <div className="flex justify-around bg-black/40 border border-white/15 rounded-xl px-2 py-2">
-      {buttons.map(b => (
-        <div key={b.label} className="flex flex-col items-center gap-0.5">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-base">{b.icon}</div>
-          <span className="text-[8px] text-green-300">{b.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function NearMissMockup() {
   return (
     <div className="flex flex-col items-center gap-2 bg-black/30 rounded-xl p-3">
@@ -281,13 +262,19 @@ function NearMissMockup() {
 }
 
 function InGameChatMockup() {
-  const presets = ['GG!', 'Nice play!', 'Oops 😅', 'Let\'s go! 🔥'];
+  const presets = ['Wahhh!', 'Rude!', 'Karma!', 'Who tf?', 'Womp Womppp', 'Seriously??'];
+  const emojis = ['😲', '🙀', '💀', '👑', '👀', '⁉️', '❤️'];
   return (
     <div className="flex flex-col gap-2 bg-black/30 rounded-xl p-3">
       <div className="text-[9px] text-green-400 font-bold uppercase tracking-wide">Quick presets</div>
       <div className="flex flex-wrap gap-1">
         {presets.map(p => (
           <span key={p} className="px-2 py-1 bg-white/10 border border-white/20 rounded-full text-[9px] text-white">{p}</span>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {emojis.map(e => (
+          <span key={e} className="px-2 py-1 bg-white/10 border border-white/20 rounded-full text-[9px] text-white">{e}</span>
         ))}
       </div>
       <div className="flex items-center gap-1.5 bg-white/5 border border-white/20 rounded-lg px-2 py-1.5">
@@ -345,7 +332,6 @@ export function V071Content() {
 
       <FeatureSection emoji="🛠️" title="Improved In-Game Toolbar">
         <p>The in-game toolbar has been upgraded with quick-access buttons for <strong className="text-white">💬 Chat</strong>, <strong className="text-white">⚙️ Settings</strong>, <strong className="text-white">📖 How-to-Play</strong>, and <strong className="text-white">📹 Video Mode</strong> — all reachable without leaving the game.</p>
-        <ToolbarMockup />
         <div className="flex flex-wrap gap-1 pt-0.5">
           <Chip color="yellow">All game modes</Chip>
           <Chip color="green">One-tap access</Chip>
