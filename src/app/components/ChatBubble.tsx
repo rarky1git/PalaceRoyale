@@ -27,10 +27,10 @@ export function ChatBubble({ text, msgId, position = 'below' }: ChatBubbleProps)
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: position === 'above' ? -4 : 4, scale: 0.9 }}
           transition={{ duration: 0.18 }}
-          className={`absolute ${position === 'above' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2' : 'top-full left-1/2 -translate-x-1/2 mt-2'} z-40 pointer-events-none`}
-          style={{ minWidth: '60px', maxWidth: '140px' }}
+          className={`absolute ${position === 'above' ? 'bottom-full left-1/2 translate-x-1/2 mb-2' : 'top-full left-1/2 -translate-x-1/2 mt-2'} z-40 pointer-events-none`}
+          style={{ minWidth: '60px', maxWidth: '160px' }}
         >
-          <div className="bg-white text-gray-900 text-[10px] font-semibold px-2.5 py-1.5 rounded-xl shadow-lg text-center leading-tight break-words relative">
+          <div className="bg-white text-gray-900 text-[14px] font-semibold px-2.5 py-1.5 rounded-xl shadow-[0_8px_28px_rgba(0,0,0,0.6)] text-center leading-tight break-words relative">
             {position === 'above' ? (
               /* Triangle pointer pointing down */
               <div

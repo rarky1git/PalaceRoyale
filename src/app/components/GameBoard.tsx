@@ -896,7 +896,13 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
           style={{ maxWidth: 'calc(50% - 1rem)' }}
         >
           {/* Opponent info */}
-          <div className="flex items-center gap-1.5 px-2 pt-2 pb-1">
+          <div className="relative flex items-center gap-1.5 px-2 pt-2 pb-1">
+            {isMultiplayer && chatMessages?.[chatOpponent.id] && (
+              <ChatBubble
+                text={chatMessages[chatOpponent.id].text}
+                msgId={chatMessages[chatOpponent.id].msgId}
+              />
+            )}
             <span className="text-base leading-none">{chatOpponent.emoji || DEFAULT_EMOJI}</span>
             <span className={`text-[10px] font-bold truncate flex-1 ${
               (gameState.eliminated || []).includes(chatOpponent.id) ? 'text-green-300' :
@@ -1270,12 +1276,12 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               {/* Preset options */}
               <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  'Good game! 👋',
-                  'Nice play! 🎯',
-                  'Ouch! 😬',
-                  'Ha! 😂',
-                  'Come on... 😤',
-                  'Lucky! 🍀',
+                  'Wahhh!',
+                  'Rude!',
+                  'Karma!',
+                  'Who tf?',
+                  'Womp Womppp',
+                  'Seriously??',
                 ].map(preset => (
                   <button
                     key={preset}
@@ -1291,7 +1297,7 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
               </div>
               {/* Emoji quick-picks */}
               <div className="flex gap-1.5 justify-center">
-                {['😎', '🔥', '💀', '🤔', '👀', '🎉'].map(emoji => (
+                {['😲', '🙀', '💀', '👑', '👀', '⁉️', '❤️'].map(emoji => (
                   <button
                     key={emoji}
                     onClick={() => {
