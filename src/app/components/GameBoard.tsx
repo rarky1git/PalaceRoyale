@@ -996,50 +996,71 @@ export function GameBoard({ gameState, myPlayerId, onStateChange, isMultiplayer,
         className={`relative z-[1] flex p-2 ${miniOpponents ? 'gap-2' : 'gap-4'} shrink-0 overflow-x-auto cursor-pointer select-none ${chatMode ? 'hidden' : ''}`}
         onClick={() => setMiniOpponents(v => !v)}
       >
-        {prevOpponent && (
-          <>
-            <OpponentView
-              key={prevOpponent.id}
-              player={prevOpponent}
-              isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
-              isSetup={isSetup}
-              isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
-              eliminated={gameState.eliminated || []}
-              mini={miniOpponents}
-              isBeforePlayer
-              deferredSetup={deferredSetup}
-              chatEntry={chatMessages?.[prevOpponent.id]}
-            />
-            <div className="shrink-0 w-px self-stretch bg-white/20 mx-1" />
-          </>
-        )}
-        {nextOpponent && (
-          <OpponentView
-            key={nextOpponent.id}
-            player={nextOpponent}
-            isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === nextOpponent.id}
-            isSetup={isSetup}
-            isEliminated={(gameState.eliminated || []).includes(nextOpponent.id)}
-            eliminated={gameState.eliminated || []}
-            mini={miniOpponents}
-            isAfterPlayer
-            deferredSetup={deferredSetup}
-            chatEntry={chatMessages?.[nextOpponent.id]}
-          />
-        )}
-        {otherOpponents.map(opp => (
-          <OpponentView
-            key={opp.id}
-            player={opp}
-            isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === opp.id}
-            isSetup={isSetup}
-            isEliminated={(gameState.eliminated || []).includes(opp.id)}
-            eliminated={gameState.eliminated || []}
-            mini={miniOpponents}
-            deferredSetup={deferredSetup}
-            chatEntry={chatMessages?.[opp.id]}
-          />
-        ))}
+        {(() => {
+          const oppWidth = `calc((100vw - ${miniOpponents ? 2 : 3}rem) / 3)`;
+          const getTurnDistance = (opp: { id: string }) => {
+            const oppIdx = gameState.players.findIndex(p => p.id === opp.id);
+            return (oppIdx - gameState.currentPlayerIndex + totalPlayers) % totalPlayers;
+          };
+          return (
+            <>
+              {prevOpponent && (
+                <>
+                  <OpponentView
+                    key={prevOpponent.id}
+                    player={prevOpponent}
+                    isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === prevOpponent.id}
+                    isSetup={isSetup}
+                    isEliminated={(gameState.eliminated || []).includes(prevOpponent.id)}
+                    eliminated={gameState.eliminated || []}
+                    mini={miniOpponents}
+                    deferredSetup={deferredSetup}
+                    chatEntry={chatMessages?.[prevOpponent.id]}
+                    isMyTurn={isMyTurn}
+                    turnDistance={getTurnDistance(prevOpponent)}
+                    totalPlayers={totalPlayers}
+                    oppWidth={oppWidth}
+                  />
+                  <div className="shrink-0 w-px self-stretch bg-white/20 mx-1" />
+                </>
+              )}
+              {nextOpponent && (
+                <OpponentView
+                  key={nextOpponent.id}
+                  player={nextOpponent}
+                  isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === nextOpponent.id}
+                  isSetup={isSetup}
+                  isEliminated={(gameState.eliminated || []).includes(nextOpponent.id)}
+                  eliminated={gameState.eliminated || []}
+                  mini={miniOpponents}
+                  deferredSetup={deferredSetup}
+                  chatEntry={chatMessages?.[nextOpponent.id]}
+                  isMyTurn={isMyTurn}
+                  turnDistance={getTurnDistance(nextOpponent)}
+                  totalPlayers={totalPlayers}
+                  oppWidth={oppWidth}
+                />
+              )}
+              {otherOpponents.map(opp => (
+                <OpponentView
+                  key={opp.id}
+                  player={opp}
+                  isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === opp.id}
+                  isSetup={isSetup}
+                  isEliminated={(gameState.eliminated || []).includes(opp.id)}
+                  eliminated={gameState.eliminated || []}
+                  mini={miniOpponents}
+                  deferredSetup={deferredSetup}
+                  chatEntry={chatMessages?.[opp.id]}
+                  isMyTurn={isMyTurn}
+                  turnDistance={getTurnDistance(opp)}
+                  totalPlayers={totalPlayers}
+                  oppWidth={oppWidth}
+                />
+              ))}
+            </>
+          );
+        })()}
         {opponents.length > 0 && (
           <div className="flex items-start pt-1 pl-1 shrink-0">
             <span className="text-[9px] text-green-500/60">{miniOpponents ? '＋' : '－'}</span>
@@ -1646,19 +1667,28 @@ function PileCard({ card }: { card: Card }) {
   );
 }
 
-function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, isBeforePlayer, isAfterPlayer, deferredSetup, chatEntry }: {
+function OpponentView({ player, isCurrentTurn, isSetup, isEliminated, eliminated, mini, deferredSetup, chatEntry, isMyTurn, turnDistance, totalPlayers, oppWidth }: {
   player: Player; isCurrentTurn: boolean; isSetup: boolean; isEliminated: boolean; eliminated: string[]; mini?: boolean;
-  isBeforePlayer?: boolean; isAfterPlayer?: boolean; deferredSetup?: boolean;
-  chatEntry?: { text: string; msgId: number };
+  deferredSetup?: boolean; chatEntry?: { text: string; msgId: number };
+  isMyTurn: boolean; turnDistance: number; totalPlayers: number; oppWidth: string;
 }) {
+  let bgColor: string;
+  if (isEliminated) {
+    bgColor = 'rgba(34,197,94,0.1)';
+  } else {
+    const maxOpacity = 0.4;
+    const opacity = isMyTurn || isCurrentTurn
+      ? maxOpacity
+      : maxOpacity * Math.max(0.2, (totalPlayers - turnDistance) / totalPlayers);
+    bgColor = `rgba(234,179,8,${opacity.toFixed(2)})`;
+  }
   return (
-    <div className={`relative flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5 min-w-34'} max-w-102 rounded-lg transition-all shrink-0 ${
-      isEliminated ? 'bg-green-500/10 opacity-50' :
-      isCurrentTurn ? 'bg-yellow-500/20 ring-1 ring-yellow-400' :
-      isBeforePlayer ? 'bg-purple-500/20' :
-      isAfterPlayer ? 'bg-green-500/20' :
-      'bg-black/10'
-    }`}>
+    <div
+      className={`relative flex flex-col items-center gap-1 ${isSetup ? 'px-2 py-1.5' : 'p-1.5'} rounded-lg transition-all shrink-0 ${
+        isEliminated ? 'opacity-50' : isCurrentTurn ? 'ring-1 ring-yellow-400' : ''
+      }`}
+      style={isSetup ? undefined : { width: oppWidth, backgroundColor: bgColor }}
+    >
       <div className="relative flex items-center justify-center w-full">
         {chatEntry && (
           <ChatBubble text={chatEntry.text} msgId={chatEntry.msgId} />
